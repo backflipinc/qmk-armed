@@ -355,7 +355,7 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
 }
 
 /* --------------------------------------------------------------------------
- * Заряд по USB: HID-отчёт Battery Strength (патч ядра qmk/patches/hid-battery.patch).
+ * Заряд по USB: HID-отчёт Battery Strength (HID_BATTERY_ENABLE из ядра qmk-armed).
  * Linux показывает его как батарею устройства (upower, панель).
  * ------------------------------------------------------------------------ */
 

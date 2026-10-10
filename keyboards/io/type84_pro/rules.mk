@@ -22,8 +22,8 @@ BATTERY_ENABLE = yes
 BATTERY_DRIVER = custom
 SRC += battery_cw2017.c
 
-# Заряд по USB: HID Battery Strength. Требует патча ядра QMK: qmk/patches/hid-battery.patch
-OPT_DEFS += -DHID_BATTERY_ENABLE
+# Заряд по USB: HID Battery Strength
+HID_BATTERY_ENABLE = yes
 
 # Интерфейс дисплея (меню, HUD) + скорость печати на главном экране
 SRC += ui.c

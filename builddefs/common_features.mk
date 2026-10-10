@@ -666,6 +666,10 @@ ifeq ($(strip $(ARMED_ENABLE)), yes)
     SRC += $(QUANTUM_DIR)/armed/armed.c
 endif
 
+ifeq ($(strip $(HID_BATTERY_ENABLE)), yes)
+    OPT_DEFS += -DHID_BATTERY_ENABLE
+endif
+
 ifeq ($(strip $(RAW_ENABLE)), yes)
     OPT_DEFS += -DRAW_ENABLE
     SRC += raw_hid.c
