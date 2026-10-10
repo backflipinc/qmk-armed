@@ -43,6 +43,10 @@ usb_endpoint_in_t usb_endpoints_in[USB_ENDPOINT_IN_COUNT] = {
 #if defined(DIGITIZER_SHARED_EP)
         QMK_USB_REPORT_STROAGE_ENTRY(REPORT_ID_DIGITIZER, sizeof(report_digitizer_t)),
 #endif
+#if defined(HID_BATTERY_ENABLE)
+        // the Linux kernel reads the battery level with GET_REPORT when the device is probed
+        QMK_USB_REPORT_STROAGE_ENTRY(REPORT_ID_BATTERY, 3),
+#endif
         )
     ),
 #endif

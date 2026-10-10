@@ -365,10 +365,20 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM SharedReport[] = {
     HID_RI_USAGE(8, 0x80),                // System Control
     HID_RI_COLLECTION(8, 0x01),           // Application
         HID_RI_REPORT_ID(8, REPORT_ID_SYSTEM),
+#ifdef HID_BATTERY_ENABLE
+        // Only what QMK actually sends (power / sleep / wake). The full 0x01..0xB7
+        // range includes Generic Desktop axes (X/Y, D-pad -> ABS_HAT), so udev tags the
+        // interface as a joystick and UPower shows the keyboard battery as "gaming input"
+        HID_RI_USAGE_MINIMUM(8, 0x81),    // System Power Down
+        HID_RI_USAGE_MAXIMUM(16, 0x0083), // System Wake Up
+        HID_RI_LOGICAL_MINIMUM(8, 0x81),
+        HID_RI_LOGICAL_MAXIMUM(16, 0x0083),
+#else
         HID_RI_USAGE_MINIMUM(8, 0x01),    // Pointer
         HID_RI_USAGE_MAXIMUM(16, 0x00B7), // System Display LCD Autoscale
         HID_RI_LOGICAL_MINIMUM(8, 0x01),
         HID_RI_LOGICAL_MAXIMUM(16, 0x00B7),
+#endif
         HID_RI_REPORT_COUNT(8, 1),
         HID_RI_REPORT_SIZE(8, 16),
         HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_ARRAY | HID_IOF_ABSOLUTE),
@@ -385,6 +395,33 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM SharedReport[] = {
         HID_RI_REPORT_COUNT(8, 1),
         HID_RI_REPORT_SIZE(8, 16),
         HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_ARRAY | HID_IOF_ABSOLUTE),
+    HID_RI_END_COLLECTION(0),
+#endif
+
+#ifdef HID_BATTERY_ENABLE
+    // Battery level 0..100 % (Linux: hid-input -> power_supply)
+    HID_RI_USAGE_PAGE(8, 0x06),            // Generic Device Controls
+    HID_RI_USAGE(8, 0x20),                 // Battery Strength
+    HID_RI_COLLECTION(8, 0x01),            // Application
+        HID_RI_REPORT_ID(8, REPORT_ID_BATTERY),
+        HID_RI_USAGE_PAGE(8, 0x06),        // Generic Device Controls
+        HID_RI_USAGE(8, 0x20),             // Battery Strength
+        HID_RI_LOGICAL_MINIMUM(8, 0),
+        HID_RI_LOGICAL_MAXIMUM(8, 100),
+        HID_RI_REPORT_COUNT(8, 1),
+        HID_RI_REPORT_SIZE(8, 8),
+        HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
+        // Charging (1 bit) + 7 bits of padding
+        HID_RI_USAGE_PAGE(8, 0x85),        // Battery System
+        HID_RI_USAGE(8, 0x44),             // Charging
+        HID_RI_LOGICAL_MINIMUM(8, 0),
+        HID_RI_LOGICAL_MAXIMUM(8, 1),
+        HID_RI_REPORT_COUNT(8, 1),
+        HID_RI_REPORT_SIZE(8, 1),
+        HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
+        HID_RI_REPORT_COUNT(8, 1),
+        HID_RI_REPORT_SIZE(8, 7),
+        HID_RI_INPUT(8, HID_IOF_CONSTANT),
     HID_RI_END_COLLECTION(0),
 #endif
 
