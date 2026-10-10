@@ -18,16 +18,17 @@ How the port is put together, what was tricky, and how to change things.
 | `safety.c` | Esc-on-plug bootloader check, watchdog, `bootloader_jump()` |
 | `snaptap.c` | the SnapTap switch: SOCD for A/D and W/S |
 | `settings.c` | keyboard settings in the EEPROM kb datablock |
-| `io84_hid.c` | Raw HID channel for Vial Armed (built with VIA / Vial only) |
+| `armed_kb.c` | qmk-armed features for Vial Armed: colours, Fn colour, light bar, auto-sleep (built with VIA / Vial only) |
 | `chconf.h`, `halconf.h`, `mcuconf.h`, `config.h`, `rules.mk` | configuration |
-| `graphics/` | QFF fonts generated from `fonts/` |
+| `graphics/` | QFF fonts generated from `graphics/fonts/` |
+| `docs/`, `udev/`, `flash.sh`, `tools/` | documentation, udev rules, flasher wrapper, `vial.json` generator |
 
-The repo also carries two QMK core patches (applied by `setup.sh`):
+The keyboard relies on these qmk-armed core changes:
 
-- `patches/hid-battery.patch` — USB HID battery report;
-- `patches/vial.patch` — Vial support: the core diff of vial-qmk `merge-2025-12-28` against
-  its QMK base (`acbeec29da`, an ancestor of the tested SonixQMK commit), without keyboards,
-  docs and the STM32 `vibl` bootloader. Regenerate it the same way when moving to a newer vial-qmk.
+- USB HID battery report (`HID_BATTERY_ENABLE`);
+- Vial: the core diff of vial-qmk `merge-2025-12-28` against its QMK base (`acbeec29da`, an ancestor
+  of the SonixQMK commit the fork starts from), without keyboards, docs and the STM32 `vibl` bootloader;
+- the [qmk-armed protocol](../../../../docs/armed.md) for Vial Armed.
 
 ## Boot order
 
@@ -66,8 +67,8 @@ same way the stock firmware does it:
 | Firmware hangs when the RGB engine starts | ChibiOS on SN32F290 keeps system time on **CT16B0** (tick-less mode), which the LED PWM needs → `chconf.h` switches to a periodic SysTick (10 kHz). Side effect: `wait_us()` now sleeps ≥ 100 µs, use busy loops for µs delays |
 | Display goes black after 30 s, backlight stays on | Quantum Painter's own display timeout → `QUANTUM_PAINTER_DISPLAY_TIMEOUT 0` |
 | Colours shift at low brightness | `hsv_to_rgb()` applies a CIE curve and integer maths — dim the finished RGB instead, and round PWM duties up |
-| UPower shows the USB battery as "gaming input" | QMK's System Control report spans Generic Desktop axes → udev tags the interface as a joystick; the core patch narrows it |
-| UPower doesn't pick up the USB battery | The kernel reads the battery with GET_REPORT at probe time; QMK didn't answer it → the core patch stores the report |
+| UPower shows the USB battery as "gaming input" | QMK's System Control report spans Generic Desktop axes → udev tags the interface as a joystick; the USB battery report narrows it |
+| UPower doesn't pick up the USB battery | The kernel reads the battery with GET_REPORT at probe time; QMK didn't answer it → qmk-armed stores the report |
 | With `BLUETOOTH_ENABLE`, PC sleep isn't handled | QMK builds with `NO_USB_STARTUP_CHECK` → the USB suspend loop is repeated in `wireless.c` (USB mode only) |
 
 ## Settings in EEPROM
@@ -91,32 +92,12 @@ storage and resets **all** settings once.
 
 The RGB Matrix, keymap (NKRO, Win lock) and connection settings use QMK's own EEPROM areas.
 
-## Raw HID channel for Vial Armed
+## Settings in Vial Armed
 
-VIA and VialRGB only cover QMK's built-in effects and one colour. `io84_hid.c` handles one extra
-Raw HID command, `0x84` (unused by VIA and Vial), in `raw_hid_receive_kb()`; anything else still
-comes back as `id_unhandled`. [Vial Armed](https://github.com/backflipinc/vial-gui-armed) probes it on connect.
-
-Requests are 32 bytes: `[0x84, sub, ...]`. On an error the reply's first byte is `0xFF`.
-
-| Sub | Request | Reply |
-|---|---|---|
-| `0` INFO | — | `[2..5]` `IO84`, `[6]` protocol (1), `[7..11]` list sizes, `[12]` max brightness |
-| `1` LIST | `[2]` list, `[3]` index | `[4..]` entry, see below |
-| `2` GET | `[2]` value id | `[3]` value |
-| `3` SET | `[2]` value id, `[3]` value | applied and saved (HSV / speed: live only) |
-| `4` SAVE | — | writes HSV and speed to EEPROM |
-
-Lists: `0` effects (`[4]` QMK mode id, `[5..]` name), `1` colour presets (`[4]` H, `[5]` S, `[6..]` name;
-H=0 S=1 is black), `2` light bar modes (`[4..]` name), `3` sleep options (`[4]` minutes, 0 = off),
-`4` LEDs (`[4]` row, `[5]` col, `[6]` x, `[7]` y, `[8]` flags).
-
-Values: `0` lighting on, `1` effect (QMK mode id), `2` COLOR 2, `3` FN COLOR, `4` light bar mode,
-`5` light bar colour, `6` Caps alert, `7` sleep option, `8` hue, `9` saturation, `10` brightness, `11` speed.
-Colours are indexes into the preset list.
-
-Hue, saturation, brightness and speed are applied without EEPROM writes, so a slider can stream them;
-the app sends SAVE when the slider is released. Bump `IO84_PROTOCOL` when the layout changes.
+[Vial Armed](https://github.com/backflipinc/vial-gui-armed) reads and changes settings over the
+[qmk-armed protocol](../../../../docs/armed.md). The core covers RGB Matrix; `armed_kb.c` declares
+`ARMED_F_COLOR2`, `ARMED_F_FN_COLOR`, `ARMED_F_STRIP` and `ARMED_F_SLEEP` and maps them onto the
+settings above. All custom effects from `rgb_matrix_kb.inc` are flagged as two-colour.
 
 ## Keymaps
 
@@ -133,11 +114,11 @@ Custom keycodes for your own keymap (`type84_pro.h`): `BT_1`…`BT_5`, `RF_PAIR`
 ## Regenerating fonts
 
 ```sh
-cd qmk_firmware
-qmk painter-make-font-image --font ../fonts/ShareTechMono-Regular.ttf --size 20 -o tech20.png
+G=keyboards/io/type84_pro/graphics
+qmk painter-make-font-image --font $G/fonts/ShareTechMono-Regular.ttf --size 20 -o tech20.png
 qmk painter-convert-font-image --input tech20.png -f mono4
-mv tech20.qff.* ../keyboards/io/type84_pro/graphics/
+mv tech20.qff.* $G/
 ```
 
-(`tech14` = Share Tech Mono 14, `raj44` = Rajdhani Bold 44.) Run `qmk` from inside the
-`qmk_firmware` tree, otherwise it doesn't find the painter commands.
+(`tech14` = Share Tech Mono 14, `raj44` = Rajdhani Bold 44.) Run `qmk` from the root of the
+tree, otherwise it doesn't find the painter commands.

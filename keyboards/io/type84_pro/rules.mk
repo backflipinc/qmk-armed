@@ -39,5 +39,5 @@ SRC += snaptap.c
 
 SRC += settings.c
 
-# Raw HID channel for vial-gui-armed (only built with VIA)
-SRC += io84_hid.c
+# qmk-armed hooks for vial-gui-armed (only built with VIA)
+SRC += armed_kb.c
