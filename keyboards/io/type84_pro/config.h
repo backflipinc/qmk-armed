@@ -28,3 +28,10 @@
 
 // Имена эффектов подсветки для меню (ui.c)
 #define RGB_MATRIX_MODE_NAME_ENABLE
+
+// Settings in MCU flash: 16 KiB backing, 4 KiB logical (mirrored in RAM)
+#define WEAR_LEVELING_BACKING_SIZE 16384
+#define WEAR_LEVELING_LOGICAL_SIZE 4096
+
+#define EECONFIG_KB_DATA_SIZE 32
+#define EECONFIG_KB_DATA_VERSION 0x54380001 // bump when kb_settings_t layout changes

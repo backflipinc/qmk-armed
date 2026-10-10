@@ -20,6 +20,7 @@
 #    include "battery.h"
 #    include "battery_cw2017.h"
 #    include "strip.h"
+#    include "settings.h"
 #    include "graphics/tech14.qff.c"
 #    include "graphics/tech20.qff.c"
 #    include "graphics/raj44.qff.c"
@@ -97,8 +98,7 @@ static void brackets(int x0, int y0, int x1, int y1, col_t c, int l) {
 }
 
 /* --------------------------------------------------------------------------
- * Настройки UI в EEPROM (eeconfig_kb): биты 6-8 — акцент, 9-11 — таймаут экрана.
- * Биты 0-5 — wireless.c (слот, автосон), бит 12 — однократная миграция (type84_pro.c).
+ * Настройки UI
  * ------------------------------------------------------------------------ */
 
 static const struct {
@@ -109,18 +109,17 @@ static const struct {
 static uint8_t accent_idx, scr_to_idx;
 
 static void settings_load(void) {
-    uint32_t kb = eeconfig_read_kb();
-    accent_idx  = (kb >> 6) & 7;
-    scr_to_idx  = (kb >> 9) & 7;
+    accent_idx = kb_settings()->accent;
+    scr_to_idx = kb_settings()->screen_timeout;
     if (accent_idx >= ARRAY_SIZE(accents)) accent_idx = 0;
     if (scr_to_idx >= ARRAY_SIZE(screen_timeouts)) scr_to_idx = 0;
     C_ACC = accents[accent_idx].c;
 }
 
 static void settings_save(void) {
-    uint32_t kb = eeconfig_read_kb();
-    kb          = (kb & ~((7UL << 6) | (7UL << 9))) | ((uint32_t)accent_idx << 6) | ((uint32_t)scr_to_idx << 9);
-    eeconfig_update_kb(kb);
+    kb_settings()->accent         = accent_idx;
+    kb_settings()->screen_timeout = scr_to_idx;
+    kb_settings_save();
     C_ACC = accents[accent_idx].c;
 }
 

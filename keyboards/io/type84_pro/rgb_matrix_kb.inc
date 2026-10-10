@@ -1,5 +1,5 @@
 // Двухцветные эффекты подсветки: цвет 1 — основной цвет RGB Matrix (меню COLOR / HUE / SATUR),
-// цвет 2 — меню COLOR 2 (type84_color2(), хранится в eeconfig_kb). Яркость общая.
+// цвет 2 — меню COLOR 2 (type84_color2()). Яркость общая.
 // «Чёрный» в меню хранится как H=0, S=1 (type84_is_black) и здесь превращается в выключенный LED.
 
 RGB_MATRIX_EFFECT(TWO_TONE)

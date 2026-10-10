@@ -4,12 +4,12 @@
 //
 // Режимы: WPM (чёрный -> цвет по скорости печати, полный цвет на 200 WPM), WPM BAR, BATTERY, LINK, SCANNER, OFF.
 // CAPS ALERT: при Caps Lock вся полоса горит цветом полосы поверх режима.
-// Настройки — eeconfig_kb биты 24-26 (режим), 27-30 (цвет), 31 (1 = CAPS ALERT выкл).
 
 #include "quantum.h"
 #include "lib/lib8tion/lib8tion.h"
 #include "ledscan.h"
 #include "strip.h"
+#include "settings.h"
 #include "type84_pro.h"
 #include "wireless.h"
 #include "battery.h"
@@ -34,16 +34,18 @@ static bool    caps_alert = true;
  * ------------------------------------------------------------------------ */
 
 static void strip_save(void) {
-    uint32_t kb = eeconfig_read_kb();
-    kb          = (kb & 0x00FFFFFFUL) | ((uint32_t)mode << 24) | ((uint32_t)color_idx << 27) | (caps_alert ? 0 : (1UL << 31));
-    eeconfig_update_kb(kb);
+    kb_settings_t *s    = kb_settings();
+    s->strip_mode       = mode;
+    s->strip_color      = color_idx;
+    s->strip_caps_alert = caps_alert;
+    kb_settings_save();
 }
 
 void strip_init(void) {
-    uint32_t kb = eeconfig_read_kb();
-    mode        = (kb >> 24) & 7;
-    color_idx   = (kb >> 27) & 0x0F;
-    caps_alert  = !(kb & (1UL << 31));
+    kb_settings_t *s = kb_settings();
+    mode             = s->strip_mode;
+    color_idx        = s->strip_color;
+    caps_alert       = s->strip_caps_alert;
     if (mode >= STRIP_MODES) mode = 0;
     if (color_idx >= type84_colors_count) color_idx = 0; // 0 = RED
 }

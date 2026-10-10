@@ -62,22 +62,24 @@ same way the stock firmware does it:
 | UPower doesn't pick up the USB battery | The kernel reads the battery with GET_REPORT at probe time; QMK didn't answer it → the core patch stores the report |
 | With `BLUETOOTH_ENABLE`, PC sleep isn't handled | QMK builds with `NO_USB_STARTUP_CHECK` → the USB suspend loop is repeated in `wireless.c` (USB mode only) |
 
-## Settings in EEPROM (`eeconfig_kb`, 32 bits)
+## Settings in EEPROM
 
-| Bits | Setting |
+EEPROM is emulated in the MCU's own flash (`wear_leveling`, `embedded_flash`): 16 KiB of
+flash back 4 KiB of EEPROM, which QMK mirrors in RAM. The keyboard's own settings live in the
+QMK *kb datablock* as one struct, `kb_settings_t` (`settings.h`, 32 bytes reserved):
+
+| Field | Setting |
 |---|---|
-| 0–2 | Bluetooth slot (1–5) |
-| 3–5 | auto-sleep timer index |
-| 6–8 | UI accent colour |
-| 9–11 | screen-off timeout |
-| 12 | one-off migration done (NKRO default) |
-| 13 | legacy colour-2 format |
-| 14 | colour settings in v2 format |
-| 16–19 | colour 2 (preset index) |
-| 20–23 | Fn overlay colour (preset index) |
-| 24–26 | light bar mode |
-| 27–30 | light bar colour (preset index) |
-| 31 | light bar Caps alert **off** |
+| `bt_slot` | Bluetooth slot (1–5) |
+| `sleep_idx` | auto-sleep timer index |
+| `accent`, `screen_timeout` | UI accent colour, screen-off timeout |
+| `color2`, `fn_color` | colour 2 and Fn overlay colour (preset index) |
+| `strip_mode`, `strip_color`, `strip_caps_alert` | light bar |
+| `snaptap_mode` | SnapTap: last input / neutral |
+
+Changing the struct layout means bumping `EECONFIG_KB_DATA_VERSION` in `config.h`: a version
+mismatch resets these settings to defaults. Changing the wear-leveling sizes moves the
+storage and resets **all** settings once.
 
 The RGB Matrix, keymap (NKRO, Win lock) and connection settings use QMK's own EEPROM areas.
 

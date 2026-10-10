@@ -9,6 +9,7 @@
 #include "battery_cw2017.h"
 #include "usb_main.h"
 #include "strip.h"
+#include "settings.h"
 
 void safety_wdt_feed(void); // safety.c
 
@@ -201,9 +202,6 @@ void keyboard_pre_init_kb(void) {
 
 /* --------------------------------------------------------------------------
  * Цвета подсветки: готовые цвета, второй цвет двухцветных эффектов, цвет Fn-слоя.
- * eeconfig_kb: биты 16-19 — номер COLOR 2, 20-23 — номер FN COLOR, бит 14 — формат v2.
- * Биты 24-31 — полоса под дисплеем (strip.c).
- * (Старый формат: бит 13 + сырые H/S в битах 16-31 — переводится при загрузке.)
  * ------------------------------------------------------------------------ */
 
 const type84_color_t type84_colors[] = {
@@ -214,8 +212,6 @@ const uint8_t type84_colors_count = ARRAY_SIZE(type84_colors);
 
 #define COLOR_BLUE 6
 #define COLOR_WHITE 9
-#define KB_COLOR2_OLD (1UL << 13)
-#define KB_COLORS_V2 (1UL << 14)
 
 static uint8_t color2_idx = COLOR_BLUE, fn_color_idx = COLOR_WHITE;
 
@@ -228,21 +224,14 @@ int8_t type84_color_find(uint8_t h, uint8_t sat) {
 }
 
 static void colors_save(void) {
-    uint32_t kb = eeconfig_read_kb();
-    kb          = (kb & 0xFF009FFFUL) | KB_COLORS_V2 | ((uint32_t)color2_idx << 16) | ((uint32_t)fn_color_idx << 20);
-    eeconfig_update_kb(kb);
+    kb_settings()->color2   = color2_idx;
+    kb_settings()->fn_color = fn_color_idx;
+    kb_settings_save();
 }
 
 static void colors_load(void) {
-    uint32_t kb = eeconfig_read_kb();
-    if (kb & KB_COLORS_V2) {
-        color2_idx   = (kb >> 16) & 0x0F;
-        fn_color_idx = (kb >> 20) & 0x0F;
-    } else if (kb & KB_COLOR2_OLD) {
-        int8_t i   = type84_color_find((kb >> 16) & 0xFF, (kb >> 24) & 0xFF);
-        color2_idx = i < 0 ? COLOR_BLUE : i;
-        colors_save();
-    }
+    color2_idx   = kb_settings()->color2;
+    fn_color_idx = kb_settings()->fn_color;
     if (color2_idx >= ARRAY_SIZE(type84_colors)) color2_idx = COLOR_BLUE;
     if (fn_color_idx >= ARRAY_SIZE(type84_colors)) fn_color_idx = COLOR_WHITE;
 }
@@ -336,20 +325,7 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     return true;
 }
 
-// Однократные изменения настроек для клавиатур, где EEPROM уже заполнен старой прошивкой
-// (eeconfig_kb бит 12): NKRO по умолчанию включён (host.default.nkro в keyboard.json)
-#define KB_MIGRATED_NKRO (1UL << 12)
-
-static void settings_migrate(void) {
-    uint32_t kb = eeconfig_read_kb();
-    if (kb & KB_MIGRATED_NKRO) return;
-    keymap_config.nkro = true;
-    eeconfig_update_keymap(&keymap_config);
-    eeconfig_update_kb(kb | KB_MIGRATED_NKRO);
-}
-
 void keyboard_post_init_kb(void) {
-    settings_migrate();
     colors_load();
     strip_init();
 #ifdef QUANTUM_PAINTER_ENABLE

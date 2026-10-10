@@ -23,6 +23,7 @@
 #include "type84_pro.h"
 #include "battery.h"
 #include "ledscan.h"
+#include "settings.h"
 
 #ifndef USB_GETSTATUS_REMOTE_WAKEUP_ENABLED
 #    define USB_GETSTATUS_REMOTE_WAKEUP_ENABLED (2U) // как в tmk_core/protocol/chibios/chibios.c
@@ -382,15 +383,9 @@ static void apply_mode(wl_mode_t m) {
     }
 }
 
-// EEPROM (eeconfig_kb): биты 0-2 — слот BT, биты 3-5 — индекс таймера сна
 static void save_slot(void) {
-    uint32_t kb = eeconfig_read_kb();
-    eeconfig_update_kb((kb & ~7UL) | bt_slot);
-}
-
-void eeconfig_init_kb(void) {
-    eeconfig_update_kb(1 | (1UL << 12)); // слот 1, сон — индекс 0 (5 мин); миграции не нужны
-    eeconfig_init_user();
+    kb_settings()->bt_slot = bt_slot;
+    kb_settings_save();
 }
 
 /* --------------------------------------------------------------------------
@@ -400,15 +395,14 @@ void eeconfig_init_kb(void) {
 #ifndef WL_SLEEP_DEFAULT_MIN
 #    define WL_SLEEP_DEFAULT_MIN 5
 #endif
-// Индекс 0 — значение по умолчанию (так старый EEPROM с нулями даёт 5 мин)
 static const uint8_t sleep_options[] = {WL_SLEEP_DEFAULT_MIN, 10, 30, 0, 1};
 static uint8_t       sleep_idx;
 
 void wireless_sleep_set_index(uint8_t idx) {
     if (idx >= ARRAY_SIZE(sleep_options)) idx = 0;
-    sleep_idx   = idx;
-    uint32_t kb = eeconfig_read_kb();
-    eeconfig_update_kb((kb & ~(7UL << 3)) | ((uint32_t)sleep_idx << 3));
+    sleep_idx                = idx;
+    kb_settings()->sleep_idx = idx;
+    kb_settings_save();
 }
 
 uint8_t wireless_sleep_index(void) {
@@ -675,10 +669,9 @@ static void sleep_task(void) {
 void bluetooth_init(void) {
     gpio_set_pin_input_high(MODE_PIN_BT);
     gpio_set_pin_input_high(MODE_PIN_24G);
-    uint32_t kb   = eeconfig_read_kb();
-    uint8_t  slot = kb & 7;
-    bt_slot       = (slot >= 1 && slot <= 5) ? slot : 1;
-    sleep_idx     = (kb >> 3) & 7;
+    uint8_t slot = kb_settings()->bt_slot;
+    bt_slot      = (slot >= 1 && slot <= 5) ? slot : 1;
+    sleep_idx    = kb_settings()->sleep_idx;
     if (sleep_idx >= ARRAY_SIZE(sleep_options)) sleep_idx = 0;
     uart2_init();
     wait_ms(2);
