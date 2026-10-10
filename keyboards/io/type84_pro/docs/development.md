@@ -16,6 +16,9 @@ How the port is put together, what was tricky, and how to change things.
 | `wireless.c` | radio module: mode switch, BT slots, pairing, reports, NKRO over the air, auto-sleep |
 | `battery_cw2017.c` | fuel gauge over bit-banged I²C, VBUS / charge status |
 | `safety.c` | Esc-on-plug bootloader check, watchdog, `bootloader_jump()` |
+| `snaptap.c` | the SnapTap switch: SOCD for A/D and W/S |
+| `settings.c` | keyboard settings in the EEPROM kb datablock |
+| `io84_hid.c` | Raw HID channel for Vial Armed (built with VIA / Vial only) |
 | `chconf.h`, `halconf.h`, `mcuconf.h`, `config.h`, `rules.mk` | configuration |
 | `graphics/` | QFF fonts generated from `fonts/` |
 
@@ -87,6 +90,33 @@ mismatch resets these settings to defaults. Changing the wear-leveling sizes mov
 storage and resets **all** settings once.
 
 The RGB Matrix, keymap (NKRO, Win lock) and connection settings use QMK's own EEPROM areas.
+
+## Raw HID channel for Vial Armed
+
+VIA and VialRGB only cover QMK's built-in effects and one colour. `io84_hid.c` handles one extra
+Raw HID command, `0x84` (unused by VIA and Vial), in `raw_hid_receive_kb()`; anything else still
+comes back as `id_unhandled`. [Vial Armed](https://github.com/backflipinc/vial-gui-armed) probes it on connect.
+
+Requests are 32 bytes: `[0x84, sub, ...]`. On an error the reply's first byte is `0xFF`.
+
+| Sub | Request | Reply |
+|---|---|---|
+| `0` INFO | — | `[2..5]` `IO84`, `[6]` protocol (1), `[7..11]` list sizes, `[12]` max brightness |
+| `1` LIST | `[2]` list, `[3]` index | `[4..]` entry, see below |
+| `2` GET | `[2]` value id | `[3]` value |
+| `3` SET | `[2]` value id, `[3]` value | applied and saved (HSV / speed: live only) |
+| `4` SAVE | — | writes HSV and speed to EEPROM |
+
+Lists: `0` effects (`[4]` QMK mode id, `[5..]` name), `1` colour presets (`[4]` H, `[5]` S, `[6..]` name;
+H=0 S=1 is black), `2` light bar modes (`[4..]` name), `3` sleep options (`[4]` minutes, 0 = off),
+`4` LEDs (`[4]` row, `[5]` col, `[6]` x, `[7]` y, `[8]` flags).
+
+Values: `0` lighting on, `1` effect (QMK mode id), `2` COLOR 2, `3` FN COLOR, `4` light bar mode,
+`5` light bar colour, `6` Caps alert, `7` sleep option, `8` hue, `9` saturation, `10` brightness, `11` speed.
+Colours are indexes into the preset list.
+
+Hue, saturation, brightness and speed are applied without EEPROM writes, so a slider can stream them;
+the app sends SAVE when the slider is released. Bump `IO84_PROTOCOL` when the layout changes.
 
 ## Keymaps
 
