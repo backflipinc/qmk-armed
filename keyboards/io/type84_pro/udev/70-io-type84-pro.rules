@@ -1,0 +1,4 @@
+# IO Type 84 Pro (QMK and stock, 0c45:8009) and the SN32F290 ROM bootloader (0c45:7140):
+# let the logged-in user flash it and talk to it without sudo.
+SUBSYSTEM=="usb", ATTR{idVendor}=="0c45", ATTR{idProduct}=="8009|7140", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="0c45", ATTRS{idProduct}=="8009|7140", TAG+="uaccess"
