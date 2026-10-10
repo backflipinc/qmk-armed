@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Generate keymaps/vial/vial.json from keyboard.json: python3 tools/vial_json.py keyboard.json vial.json
+# Generate keymaps/default/vial.json from keyboard.json: python3 tools/vial_json.py keyboard.json vial.json
 import json, sys
 kb = json.load(open(sys.argv[1]))
 keys = kb['layouts']['LAYOUT']['layout']

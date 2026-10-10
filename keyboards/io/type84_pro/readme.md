@@ -9,12 +9,12 @@ per-key RGB, a removable knob and a Bluetooth / 2.4 GHz radio.
 * Hardware Supported: IO Type 84 Pro Wireless (USB `0c45:8009`, Sonix SN32F290)
 * Hardware Availability: IO by Red Square
 
-Requires the [SonixQMK](https://github.com/SonixQMK/qmk_firmware) fork plus the core patch
+Requires the [SonixQMK](https://github.com/SonixQMK/qmk_firmware) fork plus the core patches
 from this repository (`./setup.sh` does both).
 
 Make example for this keyboard (after setting up your build environment):
 
-    make io/type84_pro:default
+    make io/type84_pro:default    # with Vial; io/type84_pro:novial without
 
 Flashing example (SonixFlasherC, keyboard in bootloader mode):
 

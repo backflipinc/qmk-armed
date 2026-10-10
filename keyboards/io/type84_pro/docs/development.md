@@ -92,9 +92,9 @@ The RGB Matrix, keymap (NKRO, Win lock) and connection settings use QMK's own EE
 
 | Keymap | Use |
 |---|---|
-| `default` | everyday firmware |
-| `vial` | `default` + Vial (live remapping over USB); `vial.json` is generated from `keyboard.json` by `tools/vial_json.py` |
-| `debug` | `default` + QMK console (`qmk console`), USB stays connected in BT/2.4G so you can watch radio frames (`WL >` / `WL <`) and battery readings |
+| `default` | everyday firmware with Vial (live remapping over USB); `vial.json` is generated from `keyboard.json` by `tools/vial_json.py` |
+| `novial` | the same layout without Vial |
+| `debug` | `novial` + QMK console (`qmk console`), USB stays connected in BT/2.4G so you can watch radio frames (`WL >` / `WL <`) and battery readings |
 | `safe` | minimal: no display, console with a pin sniffer, Fn+Backspace = watchdog test |
 
 Custom keycodes for your own keymap (`type84_pro.h`): `BT_1`…`BT_5`, `RF_PAIR`, `SLEEP_T`,
