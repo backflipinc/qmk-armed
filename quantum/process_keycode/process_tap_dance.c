@@ -33,7 +33,7 @@ static tap_dance_state_t tap_dance_states[TAP_DANCE_MAX_SIMULTANEOUS];
 
 static uint16_t last_tap_time;
 
-static tap_dance_state_t *tap_dance_get_or_allocate_state(uint8_t tap_dance_idx, bool allocate) {
+tap_dance_state_t *tap_dance_get_or_allocate_state(uint8_t tap_dance_idx, bool allocate) {
     uint8_t i;
     if (tap_dance_idx >= tap_dance_count()) {
         return NULL;
@@ -149,7 +149,7 @@ static inline void process_tap_dance_action_on_reset(tap_dance_action_t *action,
     memset(state, 0, sizeof(tap_dance_state_t));
 }
 
-static inline void process_tap_dance_action_on_dance_finished(tap_dance_action_t *action, tap_dance_state_t *state) {
+void process_tap_dance_action_on_dance_finished(tap_dance_action_t *action, tap_dance_state_t *state) {
     if (!state->finished) {
         state->finished = true;
         add_weak_mods(state->weak_mods);
