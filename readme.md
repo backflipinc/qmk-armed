@@ -1,40 +1,56 @@
-# THIS IS THE DEVELOP BRANCH
+# qmk-armed
 
-Warning- This is the `develop` branch of QMK Firmware. You may encounter broken code here. Please see [Breaking Changes](https://docs.qmk.fm/#/breaking_changes) for more information.
+A [QMK](https://qmk.fm) fork built on [SonixQMK](https://github.com/SonixQMK/qmk_firmware) (`sn32_develop`), with
+[Vial](https://get.vial.today) merged in and its own companion app, [**Vial Armed**](https://github.com/backflipinc/vial-gui-armed).
 
-# Quantum Mechanical Keyboard Firmware
+It started as the firmware for the IO Type 84 Pro Wireless and grew enough core patches to become a fork of its own.
 
-[![Current Version](https://img.shields.io/github/tag/qmk/qmk_firmware.svg)](https://github.com/qmk/qmk_firmware/tags)
-[![Discord](https://img.shields.io/discord/440868230475677696.svg)](https://discord.gg/qmk)
-[![Docs Status](https://img.shields.io/badge/docs-ready-orange.svg)](https://docs.qmk.fm)
-[![GitHub contributors](https://img.shields.io/github/contributors/qmk/qmk_firmware.svg)](https://github.com/qmk/qmk_firmware/pulse/monthly)
-[![GitHub forks](https://img.shields.io/github/forks/qmk/qmk_firmware.svg?style=social&label=Fork)](https://github.com/qmk/qmk_firmware/)
+## What it adds to QMK
 
-This is a keyboard firmware based on the [tmk\_keyboard firmware](https://github.com/tmk/tmk_keyboard) with some useful features for Atmel AVR and ARM controllers, and more specifically, the [OLKB product line](https://olkb.com), the [ErgoDox EZ](https://ergodox-ez.com) keyboard, and the Clueboard product line.
+| | |
+|---|---|
+| 🧩 **Vial** | The core of [vial-qmk](https://github.com/vial-kb/vial-qmk): live remapping, macros, combos, tap dance, key overrides, QMK settings |
+| 🎛️ **qmk-armed protocol** | Raw HID channel for what VIA / Vial can't set: every RGB Matrix effect including custom ones, a second colour, Fn colour, light bar, auto-sleep. Each keyboard reports its own features — [docs/armed.md](docs/armed.md) |
+| 🔋 **USB battery** | Battery level and charging state over USB HID (`HID_BATTERY_ENABLE = yes`), picked up by Linux and UPower |
 
-## Documentation
+[Vial Armed](https://github.com/backflipinc/vial-gui-armed) detects a qmk-armed keyboard by the protocol, not by its
+name, and shows the options that keyboard reports. Regular Vial keeps working too.
 
-* [See the official documentation on docs.qmk.fm](https://docs.qmk.fm)
+## Keyboards
 
-The docs are powered by [VitePress](https://vitepress.dev/). They are also viewable offline; see [Previewing the Documentation](https://docs.qmk.fm/#/contributing?id=previewing-the-documentation) for more details.
+| Keyboard | MCU | Features |
+|---|---|---|
+| [IO Type 84 Pro Wireless](keyboards/io/type84_pro/) | Sonix SN32F290 | LCD HUD and menu, Bluetooth / 2.4 GHz, light bar, two-colour effects, SnapTap, auto-sleep |
 
-You can request changes by making a fork and opening a [pull request](https://github.com/qmk/qmk_firmware/pulls).
+Any other keyboard in the tree builds as usual; with VIA or Vial enabled it also gets the RGB Matrix part
+of the protocol.
 
-## Supported Keyboards
+## Building
 
-* [Planck](/keyboards/planck/)
-* [Preonic](/keyboards/preonic/)
-* [ErgoDox EZ](/keyboards/ergodox_ez/)
-* [Clueboard](/keyboards/clueboard/)
-* [Cluepad](/keyboards/clueboard/17/)
-* [Atreus](/keyboards/atreus/)
+You need `git`, `make`, Python 3 with [`qmk`](https://pypi.org/project/qmk/) and an `arm-none-eabi-gcc` toolchain.
 
-The project also includes community support for [lots of other keyboards](/keyboards/).
+```sh
+git clone --recurse-submodules --shallow-submodules https://github.com/backflipinc/qmk-armed.git
+cd qmk-armed
+make io/type84_pro:default
+```
 
-## Maintainers
+Ready-made firmware is attached to every [release](https://github.com/backflipinc/qmk-armed/releases).
+Flashing and everything else keyboard-specific is in the keyboard's readme.
 
-QMK is developed and maintained by Jack Humbert of OLKB with contributions from the community, and of course, [Hasu](https://github.com/tmk). The OLKB product firmwares are maintained by [Jack Humbert](https://github.com/jackhumbert), the Ergodox EZ by [ZSA Technology Labs](https://github.com/zsa), the Clueboard by [Zach White](https://github.com/skullydazed), and the Atreus by [Phil Hagelberg](https://github.com/technomancy).
+## Branches
 
-## Official Website
+| Branch | |
+|---|---|
+| `armed` | the fork, default |
+| `sn32_develop` | SonixQMK as forked |
 
-[qmk.fm](https://qmk.fm) is the official website of QMK, where you can find links to this page, the documentation, and the keyboards supported by QMK.
+## Credits
+
+- [QMK](https://github.com/qmk/qmk_firmware) and [SonixQMK](https://github.com/SonixQMK/qmk_firmware) — the firmware and the SN32 port
+- [Vial](https://get.vial.today) / [vial-qmk](https://github.com/vial-kb/vial-qmk) — live remapping
+- [ChibiOS](https://www.chibios.org) / ChibiOS-Contrib — the RTOS and HAL
+
+## License
+
+GPL-2.0-or-later, like QMK — see [LICENSE](LICENSE).
