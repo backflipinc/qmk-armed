@@ -5,7 +5,7 @@
 75% wireless keyboard by IO by Red Square with a 320×172 LCD, a light bar under it,
 per-key RGB, a removable knob and a Bluetooth / 2.4 GHz radio.
 
-* Keyboard Maintainer: [riddlah](https://github.com/riddlah)
+* Keyboard Maintainer: [backflipinc](https://github.com/backflipinc) — sources: [backflipinc/io-type84-pro-qmk](https://github.com/backflipinc/io-type84-pro-qmk)
 * Hardware Supported: IO Type 84 Pro Wireless (USB `0c45:8009`, Sonix SN32F290)
 * Hardware Availability: IO by Red Square
 

@@ -1,7 +1,7 @@
 {
     "manufacturer": "IO by Red Square",
     "keyboard_name": "IO Type 84 Pro Wireless",
-    "maintainer": "riddlah",
+    "maintainer": "backflipinc",
     "processor": "SN32F299F",
     "bootloader": "sn32-dfu",
     "usb": {
