@@ -25,6 +25,11 @@
 #include "color.h"
 #include "keyboard.h"
 
+// effect names are sent to vial-gui-armed
+#if defined(ARMED_ENABLE) && !defined(RGB_MATRIX_MODE_NAME_ENABLE)
+#    define RGB_MATRIX_MODE_NAME_ENABLE
+#endif
+
 #ifndef RGB_MATRIX_TIMEOUT
 #    define RGB_MATRIX_TIMEOUT 0
 #endif

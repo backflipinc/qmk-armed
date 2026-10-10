@@ -653,6 +653,19 @@ ifeq ($(strip $(VIA_ENABLE)), yes)
     endif
 endif
 
+# qmk-armed protocol rides on VIA's raw HID handler
+ifeq ($(strip $(VIA_ENABLE)), yes)
+    ARMED_ENABLE ?= yes
+else
+    ARMED_ENABLE := no
+endif
+
+ifeq ($(strip $(ARMED_ENABLE)), yes)
+    OPT_DEFS += -DARMED_ENABLE
+    COMMON_VPATH += $(QUANTUM_DIR)/armed
+    SRC += $(QUANTUM_DIR)/armed/armed.c
+endif
+
 ifeq ($(strip $(RAW_ENABLE)), yes)
     OPT_DEFS += -DRAW_ENABLE
     SRC += raw_hid.c

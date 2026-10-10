@@ -51,6 +51,10 @@
 #include "via.h"
 
 #include "raw_hid.h"
+
+#ifdef ARMED_ENABLE
+#    include "armed.h"
+#endif
 #include "dynamic_keymap.h"
 #include "eeprom.h"
 #include "version.h" // for QMK_BUILDDATE used in EEPROM magic
@@ -230,6 +234,12 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
 #endif
 
     switch (*command_id) {
+#ifdef ARMED_ENABLE
+        case ARMED_COMMAND_ID: {
+            armed_raw_hid_receive(data, length);
+            break;
+        }
+#endif
         case id_get_protocol_version: {
             command_data[0] = VIA_PROTOCOL_VERSION >> 8;
             command_data[1] = VIA_PROTOCOL_VERSION & 0xFF;
