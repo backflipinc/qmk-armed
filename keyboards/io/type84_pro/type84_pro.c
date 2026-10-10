@@ -9,6 +9,7 @@
 #include "battery_cw2017.h"
 #include "usb_main.h"
 #include "strip.h"
+#include "snaptap.h"
 #include "settings.h"
 
 void safety_wdt_feed(void); // safety.c
@@ -305,6 +306,7 @@ static bool fn_layer_overlay(uint8_t led_min, uint8_t led_max) {
 bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     if (!rgb_matrix_indicators_advanced_user(led_min, led_max)) return false;
     if (fn_layer_overlay(led_min, led_max)) return true;
+    if (snaptap_indicators(led_min, led_max)) return true;
     if (!type84_is_black(rgb_matrix_get_hsv())) return true;
     uint8_t m = rgb_matrix_get_mode();
     if (m >= RGB_MATRIX_CUSTOM_TWO_TONE) return true; // свои эффекты — после встроенных
@@ -328,6 +330,7 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
 void keyboard_post_init_kb(void) {
     colors_load();
     strip_init();
+    snaptap_init();
 #ifdef QUANTUM_PAINTER_ENABLE
     safety_wdt_feed();
     lcd_init();
@@ -345,7 +348,10 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
     if (!process_record_wireless(keycode, record->event.pressed)) {
         return false;
     }
-    return process_record_user(keycode, record);
+    if (!process_record_user(keycode, record)) {
+        return false;
+    }
+    return snaptap_process(keycode, record);
 }
 
 /* --------------------------------------------------------------------------
@@ -394,6 +400,7 @@ static void usb_battery_task(void) {
 
 void housekeeping_task_kb(void) {
     safety_wdt_feed();
+    snaptap_task();
     strip_task();
 #ifdef HID_BATTERY_ENABLE
     usb_battery_task();

@@ -61,7 +61,7 @@ One removable knob that fits in either of two spots:
 | Switch | Pins | Logic |
 |---|---|---|
 | Mode USB / BT / 2.4G | P1.12 `B12`, P1.13 `B13` | both high = USB, P1.12 low = Bluetooth, P1.13 low = 2.4 GHz |
-| SnapTap | P3.15 `D15` | low = on ⚠️ (not used by this firmware) |
+| SnapTap | P3.15 `D15` | low = on ⚠️ (needs the internal pull-up; drives SnapTap in `snaptap.c`) |
 
 ## RGB LEDs
 

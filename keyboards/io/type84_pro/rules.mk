@@ -35,4 +35,6 @@ RGB_MATRIX_CUSTOM_KB = yes
 # Светодиодная полоса под дисплеем (9 LED вне RGB Matrix)
 SRC += strip.c
 
+SRC += snaptap.c
+
 SRC += settings.c

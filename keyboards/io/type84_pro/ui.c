@@ -20,6 +20,7 @@
 #    include "battery.h"
 #    include "battery_cw2017.h"
 #    include "strip.h"
+#    include "snaptap.h"
 #    include "settings.h"
 #    include "graphics/tech14.qff.c"
 #    include "graphics/tech20.qff.c"
@@ -134,6 +135,7 @@ enum item_id {
     P_ROOT,
     P_LIGHT,
     P_STRIP,
+    P_SNAPTAP,
     P_WIRELESS,
     P_POWER,
     P_DISPLAY,
@@ -152,6 +154,9 @@ enum item_id {
     ST_MODE,
     ST_COLOR,
     ST_CAPS,
+    SN_STATE,
+    SN_MODE,
+    SN_KEYS,
     WL_MODE,
     WL_SLOT,
     WL_PAIR,
@@ -178,8 +183,8 @@ typedef struct {
 } item_t;
 
 static const item_t items_root[] = {
-    {"LIGHTING", IT_SUB, P_LIGHT}, {"LIGHT BAR", IT_SUB, P_STRIP}, {"WIRELESS", IT_SUB, P_WIRELESS}, {"POWER", IT_SUB, P_POWER},
-    {"DISPLAY", IT_SUB, P_DISPLAY}, {"SYSTEM", IT_SUB, P_SYSTEM},     {"ABOUT", IT_SUB, P_ABOUT},
+    {"LIGHTING", IT_SUB, P_LIGHT}, {"LIGHT BAR", IT_SUB, P_STRIP}, {"SNAPTAP", IT_SUB, P_SNAPTAP}, {"WIRELESS", IT_SUB, P_WIRELESS},
+    {"POWER", IT_SUB, P_POWER},     {"DISPLAY", IT_SUB, P_DISPLAY},  {"SYSTEM", IT_SUB, P_SYSTEM},    {"ABOUT", IT_SUB, P_ABOUT},
 };
 static const item_t items_light[] = {
     {"ENABLED", IT_TOGGLE, LIGHT_EN}, {"EFFECT", IT_ENUM, LIGHT_FX},  {"COLOR", IT_ENUM, LIGHT_COLOR}, {"COLOR 2", IT_ENUM, LIGHT_COLOR2}, {"FN COLOR", IT_ENUM, LIGHT_FNCOLOR}, {"BRIGHT", IT_RANGE, LIGHT_VAL},
@@ -189,6 +194,11 @@ static const item_t items_strip[] = {
     {"MODE", IT_ENUM, ST_MODE},
     {"COLOR", IT_ENUM, ST_COLOR},
     {"CAPS ALERT", IT_TOGGLE, ST_CAPS},
+};
+static const item_t items_snaptap[] = {
+    {"SWITCH", IT_INFO, SN_STATE},
+    {"MODE", IT_ENUM, SN_MODE},
+    {"KEYS", IT_INFO, SN_KEYS},
 };
 static const item_t items_wireless[] = {
     {"MODE", IT_INFO, WL_MODE},
@@ -226,6 +236,7 @@ static const struct {
     [P_ROOT]     = {"MENU", items_root, ARRAY_SIZE(items_root)},
     [P_LIGHT]    = {"LIGHTING", items_light, ARRAY_SIZE(items_light)},
     [P_STRIP]    = {"LIGHT BAR", items_strip, ARRAY_SIZE(items_strip)},
+    [P_SNAPTAP]  = {"SNAPTAP", items_snaptap, ARRAY_SIZE(items_snaptap)},
     [P_WIRELESS] = {"WIRELESS", items_wireless, ARRAY_SIZE(items_wireless)},
     [P_POWER]    = {"POWER", items_power, ARRAY_SIZE(items_power)},
     [P_DISPLAY]  = {"DISPLAY", items_display, ARRAY_SIZE(items_display)},
@@ -351,6 +362,15 @@ static void item_value(uint8_t id, char *buf, uint8_t len, int16_t *gauge) {
             break;
         case ST_CAPS:
             strcpy(buf, strip_caps_alert() ? "ON" : "OFF");
+            break;
+        case SN_STATE:
+            strcpy(buf, snaptap_active() ? "ON" : "OFF");
+            break;
+        case SN_MODE:
+            strcpy(buf, snaptap_mode_name(snaptap_mode()));
+            break;
+        case SN_KEYS:
+            strcpy(buf, snaptap_keys_name());
             break;
         case WL_MODE:
             strcpy(buf, mode_name());
@@ -509,6 +529,9 @@ static void item_adjust(uint8_t id, int8_t dir) {
         case ST_CAPS:
             strip_set_caps_alert(!strip_caps_alert());
             break;
+        case SN_MODE:
+            snaptap_set_mode((snaptap_mode() + SNAPTAP_MODES + dir) % SNAPTAP_MODES);
+            break;
         case WL_SLOT: {
             int8_t s = wireless_bt_slot() + dir;
             if (s < 1) s = 5;
@@ -631,7 +654,7 @@ static void main_draw(bool all) {
     uint8_t  layer = get_highest_layer(layer_state | default_layer_state);
     uint8_t  wpm   = get_current_wpm();
     uint16_t mv    = battery_millivolts();
-    uint8_t  tiles = (host_keyboard_led_state().caps_lock ? 1 : 0) | (keymap_config.nkro ? 2 : 0) | (rgb_matrix_is_enabled() ? 4 : 0) | (keymap_config.no_gui ? 8 : 0);
+    uint8_t  tiles = (host_keyboard_led_state().caps_lock ? 1 : 0) | (keymap_config.nkro ? 2 : 0) | (rgb_matrix_is_enabled() ? 4 : 0) | (keymap_config.no_gui ? 8 : 0) | (snaptap_active() ? 16 : 0);
 
     if (all) {
         rect(0, 0, W - 1, H - 1, C_BG, true);
@@ -684,14 +707,14 @@ static void main_draw(bool all) {
 
     // плашки состояний
     if (all || tiles != hud.tiles) {
-        static const char *names[] = {"CAPS", "NKRO", "LIGHT", "WIN LK"};
-        for (uint8_t i = 0; i < 4; i++) {
+        static const char *names[] = {"CAPS", "NKRO", "LIGHT", "WIN LK", "SNAPTAP"};
+        for (uint8_t i = 0; i < ARRAY_SIZE(names); i++) {
             bool on = tiles & (1 << i);
-            int  y  = 32 + i * 28;
-            rect(214, y, 312, y + 22, on ? C_PANEL : C_BG, true);
-            rect(214, y, 312, y + 22, C_LINE, false);
-            rect(218, y + 8, 223, y + 13, on ? C_ACC : C_LINE, true);
-            text(230, y + 3, f14, names[i], on ? C_TXT : C_DIM, on ? C_PANEL : C_BG);
+            int  y  = 28 + i * 23;
+            rect(214, y, 312, y + 19, on ? C_PANEL : C_BG, true);
+            rect(214, y, 312, y + 19, C_LINE, false);
+            rect(218, y + 7, 223, y + 12, on ? C_ACC : C_LINE, true);
+            text(230, y + 2, f14, names[i], on ? C_TXT : C_DIM, on ? C_PANEL : C_BG);
         }
         hud.tiles = tiles;
     }
@@ -1108,7 +1131,7 @@ void ui_task(void) {
             } else {
                 // живые значения (батарея, аптайм) — раз в секунду
                 static uint16_t live;
-                if ((page == P_POWER || page == P_ABOUT || page == P_WIRELESS) && timer_elapsed(live) > 1000) {
+                if ((page == P_POWER || page == P_ABOUT || page == P_WIRELESS || page == P_SNAPTAP) && timer_elapsed(live) > 1000) {
                     live = timer_read();
                     for (uint8_t i = scroll; i < pages[page].count && i < scroll + ROWS_VISIBLE; i++) {
                         if (pages[page].items[i].type == IT_INFO) menu_row(i);
