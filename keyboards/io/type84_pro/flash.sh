@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Flash a firmware image with SonixFlasherC (https://github.com/SonixQMK/SonixFlasherC).
 #
-# Usage: ./flash.sh [firmware.bin]   (default: qmk_firmware/io_type84_pro_default.bin)
+# Usage: ./flash.sh [firmware.bin]   (default: io_type84_pro_default.bin in the qmk-armed root)
 #
 # Put the keyboard into its bootloader first:
 #   - from QMK:   Fn+Enter -> SYSTEM -> BOOTLOADER -> Fn+Enter, or hold Esc while plugging in;
@@ -10,7 +10,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-BIN="${1:-$HERE/qmk_firmware/io_type84_pro_default.bin}"
+BIN="${1:-$HERE/../../../io_type84_pro_default.bin}"
 FLASHER="${SONIXFLASHER:-sonixflasher}"
 
 KBD="0c45/8009"   # keyboard (stock and QMK)
