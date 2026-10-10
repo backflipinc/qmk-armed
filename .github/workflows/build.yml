@@ -1,0 +1,56 @@
+name: Build
+
+on:
+  push:
+    branches: [armed]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  firmware:
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Install toolchain
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi python3-venv
+        python3 -m venv ~/qmk-venv
+        ~/qmk-venv/bin/pip install qmk
+        echo "$HOME/qmk-venv/bin" >> "$GITHUB_PATH"
+
+    - name: Build
+      run: |
+        make -j"$(nproc)" io/type84_pro:default io/type84_pro:novial
+        mkdir out
+        cp io_type84_pro_default.bin io_type84_pro_novial.bin out/
+        (cd out && sha256sum *.bin > SHA256SUMS)
+        ls -l out
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: firmware
+        path: out/
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: firmware
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: firmware
+        path: out
+
+    - uses: softprops/action-gh-release@v2
+      with:
+        files: out/*
+        generate_release_notes: true
