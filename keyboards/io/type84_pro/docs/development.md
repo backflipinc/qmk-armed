@@ -19,7 +19,12 @@ How the port is put together, what was tricky, and how to change things.
 | `chconf.h`, `halconf.h`, `mcuconf.h`, `config.h`, `rules.mk` | configuration |
 | `graphics/` | QFF fonts generated from `fonts/` |
 
-The repo also carries one QMK core patch, `patches/hid-battery.patch` (applied by `setup.sh`).
+The repo also carries two QMK core patches (applied by `setup.sh`):
+
+- `patches/hid-battery.patch` — USB HID battery report;
+- `patches/vial.patch` — Vial support: the core diff of vial-qmk `merge-2025-12-28` against
+  its QMK base (`acbeec29da`, an ancestor of the tested SonixQMK commit), without keyboards,
+  docs and the STM32 `vibl` bootloader. Regenerate it the same way when moving to a newer vial-qmk.
 
 ## Boot order
 
@@ -88,6 +93,7 @@ The RGB Matrix, keymap (NKRO, Win lock) and connection settings use QMK's own EE
 | Keymap | Use |
 |---|---|
 | `default` | everyday firmware |
+| `vial` | `default` + Vial (live remapping over USB); `vial.json` is generated from `keyboard.json` by `tools/vial_json.py` |
 | `debug` | `default` + QMK console (`qmk console`), USB stays connected in BT/2.4G so you can watch radio frames (`WL >` / `WL <`) and battery readings |
 | `safe` | minimal: no display, console with a pin sniffer, Fn+Backspace = watchdog test |
 

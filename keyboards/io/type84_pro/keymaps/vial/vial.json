@@ -1,0 +1,250 @@
+{
+  "name": "IO Type 84 Pro Wireless",
+  "vendorId": "0x0C45",
+  "productId": "0x8009",
+  "matrix": {
+    "rows": 6,
+    "cols": 16
+  },
+  "lighting": "vialrgb",
+  "customKeycodes": [
+    {
+      "name": "BT_1",
+      "title": "Bluetooth slot 1 (hold 3 s: pair)",
+      "shortName": "BT_1"
+    },
+    {
+      "name": "BT_2",
+      "title": "Bluetooth slot 2 (hold 3 s: pair)",
+      "shortName": "BT_2"
+    },
+    {
+      "name": "BT_3",
+      "title": "Bluetooth slot 3 (hold 3 s: pair)",
+      "shortName": "BT_3"
+    },
+    {
+      "name": "BT_4",
+      "title": "Bluetooth slot 4 (hold 3 s: pair)",
+      "shortName": "BT_4"
+    },
+    {
+      "name": "BT_5",
+      "title": "Bluetooth slot 5 (hold 3 s: pair)",
+      "shortName": "BT_5"
+    },
+    {
+      "name": "RF_PAIR",
+      "title": "2.4 GHz: hold 3 s to pair",
+      "shortName": "RF_PAIR"
+    },
+    {
+      "name": "SLEEP_T",
+      "title": "Auto-sleep timer",
+      "shortName": "SLEEP_T"
+    },
+    {
+      "name": "UI_UP",
+      "title": "Menu up / brightness +",
+      "shortName": "UI_UP"
+    },
+    {
+      "name": "UI_DOWN",
+      "title": "Menu down / brightness -",
+      "shortName": "UI_DOWN"
+    },
+    {
+      "name": "UI_LEFT",
+      "title": "Menu left / previous effect",
+      "shortName": "UI_LEFT"
+    },
+    {
+      "name": "UI_RIGHT",
+      "title": "Menu right / next effect",
+      "shortName": "UI_RIGHT"
+    },
+    {
+      "name": "UI_OK",
+      "title": "Open menu / select",
+      "shortName": "UI_OK"
+    },
+    {
+      "name": "UI_BACK",
+      "title": "Menu back",
+      "shortName": "UI_BACK"
+    }
+  ],
+  "layouts": {
+    "keymap": [
+      [
+        "0,0",
+        {
+          "x": 0.25
+        },
+        "0,1",
+        "0,2",
+        "0,3",
+        "0,4",
+        {
+          "x": 0.25
+        },
+        "0,5",
+        "0,6",
+        "0,7",
+        "0,8",
+        {
+          "x": 0.25
+        },
+        "0,9",
+        "0,10",
+        "0,11",
+        "0,12",
+        {
+          "x": 0.5
+        },
+        "0,13",
+        {
+          "x": 0.5
+        },
+        "5,3",
+        "5,4",
+        {
+          "x": 0.5
+        },
+        "0,0\n\n\n\n\n\n\n\n\ne",
+        "0,1\n\n\n\n\n\n\n\n\ne",
+        {
+          "x": 0.25
+        },
+        "1,0\n\n\n\n\n\n\n\n\ne",
+        "1,1\n\n\n\n\n\n\n\n\ne"
+      ],
+      [
+        {
+          "y": 0.25
+        },
+        "1,0",
+        "1,1",
+        "1,2",
+        "1,3",
+        "1,4",
+        "1,5",
+        "1,6",
+        "1,7",
+        "1,8",
+        "1,9",
+        "1,10",
+        "1,11",
+        "1,12",
+        {
+          "w": 2
+        },
+        "1,13",
+        {
+          "x": 0.5
+        },
+        "1,14",
+        "1,15"
+      ],
+      [
+        {
+          "w": 1.5
+        },
+        "2,0",
+        "2,1",
+        "2,2",
+        "2,3",
+        "2,4",
+        "2,5",
+        "2,6",
+        "2,7",
+        "2,8",
+        "2,9",
+        "2,10",
+        "2,11",
+        "2,12",
+        {
+          "w": 1.5
+        },
+        "2,13",
+        {
+          "x": 0.5
+        },
+        "2,14",
+        "2,15"
+      ],
+      [
+        {
+          "w": 1.75
+        },
+        "3,0",
+        "3,1",
+        "3,2",
+        "3,3",
+        "3,4",
+        "3,5",
+        "3,6",
+        "3,7",
+        "3,8",
+        "3,9",
+        "3,10",
+        "3,11",
+        {
+          "w": 2.25
+        },
+        "3,12"
+      ],
+      [
+        {
+          "w": 2.25
+        },
+        "4,0",
+        "4,2",
+        "4,3",
+        "4,4",
+        "4,5",
+        "4,6",
+        "4,7",
+        "4,8",
+        "4,9",
+        "4,10",
+        "4,11",
+        {
+          "w": 1.75
+        },
+        "4,12",
+        {
+          "x": 1.5
+        },
+        "4,14"
+      ],
+      [
+        {
+          "w": 1.25
+        },
+        "5,0",
+        {
+          "w": 1.25
+        },
+        "5,1",
+        {
+          "w": 1.25
+        },
+        "5,2",
+        {
+          "w": 6.25
+        },
+        "5,6",
+        "5,10",
+        "5,11",
+        "5,12",
+        {
+          "x": 1.5
+        },
+        "5,13",
+        "5,14",
+        "5,15"
+      ]
+    ]
+  }
+}
