@@ -273,7 +273,9 @@ void ledscan_start(void) {
     LDBG("LS: timers running, TC3=%lu MCTRL3=%08lx\n", REG(CT16B3_BASE, CT_TC), REG(CT16B3_BASE, CT_MCTRL));
 
     running = true;
-    nvicEnableVector(CT16B3_IRQn, 3);
+    // Выше USB (SN32_USB_IRQ_PRIORITY 1): USB, вклиниваясь в фазу, давал мусор на полосе под
+    // дисплеем при потоке raw HID. ISR короткий, USB подождёт
+    nvicEnableVector(CT16B3_IRQn, 0);
     LDBG("LS: irq on\n");
 }
 
