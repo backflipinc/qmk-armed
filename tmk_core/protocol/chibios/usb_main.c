@@ -514,9 +514,15 @@ void send_raw_hid(uint8_t *data, uint8_t length) {
     send_report(USB_ENDPOINT_IN_RAW, data, length);
 }
 
+// A few reports per main loop pass: a host streaming reports back to back (qmk-armed screen
+// upload) would otherwise keep this loop busy, starving key processing and housekeeping.
+#    ifndef RAW_HID_REPORTS_PER_TASK
+#        define RAW_HID_REPORTS_PER_TASK 4
+#    endif
+
 void raw_hid_task(void) {
     uint8_t buffer[RAW_EPSIZE];
-    while (receive_report(USB_ENDPOINT_OUT_RAW, buffer, sizeof(buffer))) {
+    for (uint8_t i = 0; i < RAW_HID_REPORTS_PER_TASK && receive_report(USB_ENDPOINT_OUT_RAW, buffer, sizeof(buffer)); i++) {
         raw_hid_receive(buffer, sizeof(buffer));
     }
 }
