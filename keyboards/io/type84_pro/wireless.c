@@ -557,6 +557,30 @@ static void wake_irq_clear(SN_GPIO1_Type *port, uint32_t mask) {
     port->IC = mask;
 }
 
+// Такт вниз, сон и такт обратно на IHRC — из RAM (.ram0_init копируется туда при старте).
+// Из флеша пробуждение зависело от того, как лёг код вокруг WFI: v1.2.0 с WFI на тех же
+// адресах не просыпалась (вероятно, HardFault на выборке из ещё не проснувшейся флеши — WDT
+// в этот момент выключен), сборки с чуть сдвинутым кодом просыпались. Из RAM флеш до
+// возврата на IHRC не нужна вовсе.
+__attribute__((section(".ram0_init"), noinline, long_call)) static void deep_sleep_wfi(void) {
+    // такт: ILRC, PLL и IHRC выключить (сток sub_01360)
+    SN_SYS0->CLKCFG = SYS0_CLK_ILRC;
+    while (((SN_SYS0->CLKCFG >> 4) & 7) != SYS0_CLK_ILRC) {
+    }
+    SN_SYS0->PLLCTRL &= ~(1UL << 15);
+    SN_SYS0->ANBCTRL &= ~1UL; // IHRCEN
+
+    SN_PMU->CTRL = PMU_CTRL_DEEP_SLEEP;
+    __WFI();
+    SN_PMU->CTRL = 0;
+
+    // такт обратно: IHRC (сток sub_01190)
+    SN_SYS0->ANBCTRL |= 1UL;
+    SN_SYS0->CLKCFG = SYS0_CLK_IHRC;
+    while (((SN_SYS0->CLKCFG >> 4) & 7) != SYS0_CLK_IHRC) {
+    }
+}
+
 static void flush_uart_tx(uint16_t timeout_ms) {
     uint16_t t0 = timer_read();
     while ((q_count() || waiting_ack) && timer_elapsed(t0) < timeout_ms) {
@@ -602,23 +626,10 @@ static void deep_sleep(void) {
     wake_irq_setup((SN_GPIO1_Type *)SN_GPIO3, WAKE_P3);
     NVIC->ISER[0] = (1UL << P0_IRQn) | (1UL << P1_IRQn) | (1UL << P3_IRQn);
 
-    // такт: ILRC, PLL и IHRC выключить (сток sub_01360)
-    SN_SYS0->CLKCFG = SYS0_CLK_ILRC;
-    while (((SN_SYS0->CLKCFG >> 4) & 7) != SYS0_CLK_ILRC) {
-    }
-    SN_SYS0->PLLCTRL &= ~(1UL << 15);
-    SN_SYS0->ANBCTRL &= ~1UL; // IHRCEN
-
-    SN_PMU->CTRL = PMU_CTRL_DEEP_SLEEP;
-    __WFI();
-    SN_PMU->CTRL = 0;
+    deep_sleep_wfi();
     safety_wdt_restart(); // сразу: если восстановление тактов зависнет — WDT -> бутлоадер
 
-    // такт обратно: IHRC, затем PLL 48 МГц как при старте (сток sub_01190)
-    SN_SYS0->ANBCTRL |= 1UL;
-    SN_SYS0->CLKCFG = SYS0_CLK_IHRC;
-    while (((SN_SYS0->CLKCFG >> 4) & 7) != SYS0_CLK_IHRC) {
-    }
+    // PLL 48 МГц как при старте (сток sub_01190)
     SystemInit();
     sn32_clock_init();
 
