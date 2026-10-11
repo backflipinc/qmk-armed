@@ -14,6 +14,7 @@ typedef struct {
     uint8_t strip_color;
     bool    strip_caps_alert;
     uint8_t snaptap_mode;
+    uint8_t screen_mode; // appended without a version bump: validated on load
 } kb_settings_t;
 
 kb_settings_t *kb_settings(void);

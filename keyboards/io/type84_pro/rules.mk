@@ -27,6 +27,9 @@ HID_BATTERY_ENABLE = yes
 
 # Интерфейс дисплея (меню, HUD) + скорость печати на главном экране
 SRC += ui.c
+
+# Своя анимация на экране: SPI-флешки на SPI1, формат стока, загрузка через qmk-armed
+SRC += spiflash.c screen.c
 WPM_ENABLE = yes
 
 # Двухцветные эффекты подсветки (rgb_matrix_kb.inc)

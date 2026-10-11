@@ -664,6 +664,7 @@ ifeq ($(strip $(ARMED_ENABLE)), yes)
     OPT_DEFS += -DARMED_ENABLE
     COMMON_VPATH += $(QUANTUM_DIR)/armed
     SRC += $(QUANTUM_DIR)/armed/armed.c
+    SRC += $(QUANTUM_DIR)/armed/armed_screen.c
 endif
 
 ifeq ($(strip $(HID_BATTERY_ENABLE)), yes)

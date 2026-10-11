@@ -1,4 +1,5 @@
-// qmk-armed hooks: colour palette, two-colour effects, Fn colour, light bar, auto-sleep
+// qmk-armed hooks: colour palette, two-colour effects, Fn colour, light bar, auto-sleep, screen
+// (the screen animation upload itself is in screen.c)
 #include "quantum.h"
 
 #ifdef ARMED_ENABLE
@@ -7,9 +8,16 @@
 #    include "type84_pro.h"
 #    include "strip.h"
 #    include "wireless.h"
+#    ifdef QUANTUM_PAINTER_ENABLE
+#        include "ui.h"
+#    endif
 
 uint16_t armed_features_kb(void) {
-    return ARMED_F_COLOR2 | ARMED_F_FN_COLOR | ARMED_F_STRIP | ARMED_F_SLEEP;
+    uint16_t f = ARMED_F_COLOR2 | ARMED_F_FN_COLOR | ARMED_F_STRIP | ARMED_F_SLEEP;
+#    ifdef QUANTUM_PAINTER_ENABLE
+    f |= ARMED_F_SCREEN;
+#    endif
+    return f;
 }
 
 uint8_t armed_list_count_kb(uint8_t list) {
@@ -65,6 +73,11 @@ bool armed_get_value_kb(uint8_t id, uint8_t *out) {
         case ARMED_V_SLEEP:
             *out = wireless_sleep_index();
             return true;
+#    ifdef QUANTUM_PAINTER_ENABLE
+        case ARMED_V_SCREEN:
+            *out = ui_screen_mode();
+            return true;
+#    endif
     }
     return false;
 }
@@ -94,6 +107,12 @@ bool armed_set_value_kb(uint8_t id, uint8_t v) {
             if (v >= wireless_sleep_option_count()) return false;
             wireless_sleep_set_index(v);
             return true;
+#    ifdef QUANTUM_PAINTER_ENABLE
+        case ARMED_V_SCREEN:
+            if (v >= UI_SCREEN_MODES) return false;
+            ui_set_screen_mode(v);
+            return true;
+#    endif
     }
     return false;
 }

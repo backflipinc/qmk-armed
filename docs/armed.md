@@ -29,6 +29,7 @@ Anything beyond RGB Matrix is a feature the keyboard declares and implements thr
 | `ARMED_F_FN_COLOR` | colours | colour of the keys lit while Fn is held |
 | `ARMED_F_STRIP` | colours, light bar modes | light bar mode, colour, Caps Lock alert |
 | `ARMED_F_SLEEP` | sleep options | auto-sleep option |
+| `ARMED_F_SCREEN` | — | what the main screen shows; plus the screen animation upload below |
 
 ```c
 #include "armed.h"
@@ -76,6 +77,11 @@ A request the firmware can't serve comes back with `0xFF` (`id_unhandled`) in th
 | `2` GET | `[2]` value id | `[3]` value |
 | `3` SET | `[2]` value id, `[3]` value | applied and saved (hue, saturation, brightness, speed: live only) |
 | `4` SAVE | — | writes hue, saturation, brightness and speed to EEPROM |
+| `5` SCREEN_INFO | — | `[2..3]` width, `[4..5]` height (LE), `[6]` pixel format, `[7]` max frames to upload, `[8]` frames stored, `[9..12]` capacity in bytes, `[13..14]` header size |
+| `6` SCREEN_BEGIN | `[2..5]` animation size in bytes | upload started |
+| `7` SCREEN_DATA | `[2]` sequence number, `[3]` length (≤ 28), `[4..]` stream | `[2]` sequence number, `[3]` status (0 = ok), `[4..7]` bytes decoded so far |
+| `8` SCREEN_END | `[2]` 1 = commit, 0 = abort | animation stored |
+| `9` SCREEN_READ | `[2..5]` offset, `[6]` length (≤ 25) | `[7..]` bytes of the stored animation |
 
 Lists:
 
@@ -88,9 +94,41 @@ Lists:
 | `4` | LEDs | `[4]` row, `[5]` col (`0xFF` if not under a key), `[6]` x, `[7]` y, `[8]` flags |
 
 Values: `0` lighting on, `1` effect (QMK mode id), `2` colour 2, `3` Fn colour, `4` light bar mode,
-`5` light bar colour, `6` Caps alert, `7` sleep option, `8` hue, `9` saturation, `10` brightness, `11` speed.
+`5` light bar colour, `6` Caps alert, `7` sleep option, `8` hue, `9` saturation, `10` brightness, `11` speed,
+`12` main screen (0 = HUD, 1 = the uploaded animation).
 Colours are indexes into the colour preset list.
 
 Hue, saturation, brightness and speed skip EEPROM writes, so a slider can stream them; the app sends SAVE
 when the slider is released. `ARMED_PROTOCOL` changes only when the wire format breaks; new features and
 values are added without a bump.
+
+## Screen animation
+
+A keyboard with `ARMED_F_SCREEN` stores one animation and plays it on its screen. The animation is a
+256-byte header followed by the frames:
+
+- header: `[0]` frame count, `[1 + i]` delay after frame i in 2 ms units, the rest `0xFF`;
+- frames: `width × height` pixels row by row, RGB565 with the low byte first (format `1`).
+
+This is the layout the IO Type 84 Pro's stock firmware keeps in its SPI flash, so the keyboard stores it as is.
+
+SCREEN_DATA carries the animation compressed, as a stream of operations on 16-bit pixels. A control byte
+is `op << 6 | n` with `n` = 1..63 pixels; `n = 0` means a 16-bit length (LE) follows.
+
+| Op | Meaning |
+|---|---|
+| `0` LIT | `n` pixels follow, 2 bytes each |
+| `1` RUN | one pixel follows, repeated `n` times |
+| `2` PREV | `n` pixels copied from the previous frame at the same place (not in the header or the first frame) |
+
+An operation may span several reports. The header goes through the stream too, usually as one LIT.
+Requests can be pipelined: the host may send several SCREEN_DATA reports before reading the replies, which
+come back in order with their sequence numbers. A failed report answers `0xFF` and the rest of the upload
+is refused; send SCREEN_END with 0. The new animation becomes visible only after a successful SCREEN_END,
+an aborted upload leaves none.
+
+[Vial Armed](https://github.com/backflipinc/vial-gui-armed) has a Screen page for it;
+`keyboards/io/type84_pro/tools/screen.py` is a command line uploader (images, GIFs, video).
+Keyboard side: implement `armed_screen_info_kb()`, `armed_screen_begin_kb()`, `armed_screen_write_kb()`
+(the decoded animation in order), `armed_screen_end_kb()` and `armed_screen_read_kb()`; see
+`keyboards/io/type84_pro/screen.c`.

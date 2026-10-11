@@ -12,23 +12,26 @@ How the port is put together, what was tricky, and how to change things.
 | `strip.c` | the 9-LED light bar under the display |
 | `ui.c` | display UI: home screen, menu, toasts, confirmations |
 | `lcd_spi.c` | Quantum Painter ↔ ST7789 transport on raw SPI0 registers |
+| `spiflash.c` | the two SPI NOR flash chips on raw SPI1 registers (read, erase, program, power-down) |
+| `screen.c` | the user animation: stock flash layout, playback by SPI-to-SPI DMA in the background, qmk-armed upload hooks |
 | `type84_pro.c` | board init (SWD off, PFPA, pull-ups), display init, colours, Fn-layer overlay, USB battery report, hooks |
 | `wireless.c` | radio module: mode switch, BT slots, pairing, reports, NKRO over the air, auto-sleep |
 | `battery_cw2017.c` | fuel gauge over bit-banged I²C, VBUS / charge status |
 | `safety.c` | Esc-on-plug bootloader check, watchdog, `bootloader_jump()` |
 | `snaptap.c` | the SnapTap switch: SOCD for A/D and W/S |
 | `settings.c` | keyboard settings in the EEPROM kb datablock |
-| `armed_kb.c` | qmk-armed features for Vial Armed: colours, Fn colour, light bar, auto-sleep (built with VIA / Vial only) |
+| `armed_kb.c` | qmk-armed features for Vial Armed: colours, Fn colour, light bar, auto-sleep, main screen (built with VIA / Vial only) |
 | `chconf.h`, `halconf.h`, `mcuconf.h`, `config.h`, `rules.mk` | configuration |
 | `graphics/` | QFF fonts generated from `graphics/fonts/` |
-| `docs/`, `udev/`, `flash.sh`, `tools/` | documentation, udev rules, flasher wrapper, `vial.json` generator |
+| `docs/`, `udev/`, `flash.sh`, `tools/` | documentation, udev rules, flasher wrapper, `vial.json` generator, `screen.py` animation uploader |
 
 The keyboard relies on these qmk-armed core changes:
 
 - USB HID battery report (`HID_BATTERY_ENABLE`);
 - Vial: the core diff of vial-qmk `merge-2025-12-28` against its QMK base (`acbeec29da`, an ancestor
   of the SonixQMK commit the fork starts from), without keyboards, docs and the STM32 `vibl` bootloader;
-- the [qmk-armed protocol](../../../../docs/armed.md) for Vial Armed.
+- the [qmk-armed protocol](../../../../docs/armed.md) for Vial Armed, including the screen animation upload;
+- `raw_hid_task()` handles at most `RAW_HID_REPORTS_PER_TASK` (4) reports per main loop pass.
 
 ## Boot order
 
@@ -69,6 +72,9 @@ same way the stock firmware does it:
 | Colours shift at low brightness | `hsv_to_rgb()` applies a CIE curve and integer maths — dim the finished RGB instead, and round PWM duties up |
 | UPower shows the USB battery as "gaming input" | QMK's System Control report spans Generic Desktop axes → udev tags the interface as a joystick; the USB battery report narrows it |
 | UPower doesn't pick up the USB battery | The kernel reads the battery with GET_REPORT at probe time; QMK didn't answer it → qmk-armed stores the report |
+| Keyboard drops into the bootloader during a long screen upload / dump | QMK's `raw_hid_task()` drained raw HID reports in a `while` loop; a host that keeps the pipeline full never let it return, so housekeeping didn't feed the watchdog → capped per pass in the core |
+| LED bar under the display shows random colours while a host talks raw HID (Vial, `screen.py`) | The LED engine's CT16B3 interrupt had the lowest priority and USB (priority 1) cut into its phases → `ledscan.c` runs it at priority 0 |
+| Animation slow when the CPU copies flash → display (~2 fps) | SPI0 has an SPI-to-SPI DMA bridge (`DMACTRL`/`DMACNT`): it clocks the flash on SPI1 straight into the panel, a frame in 37 ms. It only completes with SPI1 `RXFIFOTHIE` and SPI0 `DMATCIE` set, even with no IRQ taken (as stock) |
 | With `BLUETOOTH_ENABLE`, PC sleep isn't handled | QMK builds with `NO_USB_STARTUP_CHECK` → the USB suspend loop is repeated in `wireless.c` (USB mode only) |
 
 ## Settings in EEPROM

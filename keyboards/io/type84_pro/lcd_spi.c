@@ -129,12 +129,35 @@ static bool lcd_spi_comms_init(painter_device_t device) {
     return true;
 }
 
+// Кадр анимации идёт на экран по DMA в фоне (screen.c), CS при этом опущен. Транзакция QP,
+// начатая в это время, ждёт конца кадра только когда реально что-то шлёт: пустые (qp_flush
+// из ui_task и из задачи QP — на каждом проходе) проходят сразу и CS не трогают.
+bool screen_dma_busy(void);
+void screen_dma_wait(void);
+
+static bool lcd_cs_deferred;
+
+static void lcd_spi_claim(painter_device_t device) {
+    if (!lcd_cs_deferred) return;
+    lcd_cs_deferred = false;
+    screen_dma_wait();
+    gpio_write_pin_low(lcd_cfg(device)->spi_config.chip_select_pin);
+}
+
 static bool lcd_spi_comms_start(painter_device_t device) {
+    if (screen_dma_busy()) {
+        lcd_cs_deferred = true;
+        return true;
+    }
     gpio_write_pin_low(lcd_cfg(device)->spi_config.chip_select_pin);
     return true;
 }
 
 static bool lcd_spi_comms_stop(painter_device_t device) {
+    if (lcd_cs_deferred) { // ничего не слали — кадр DMA идёт дальше
+        lcd_cs_deferred = false;
+        return true;
+    }
     while (SN_SPI0->STAT & SPI_STAT_BUSY) {
     }
     gpio_write_pin_high(lcd_cfg(device)->spi_config.chip_select_pin);
@@ -142,6 +165,7 @@ static bool lcd_spi_comms_stop(painter_device_t device) {
 }
 
 static uint32_t lcd_spi_send_data(painter_device_t device, const void *data, uint32_t byte_count) {
+    lcd_spi_claim(device);
     gpio_write_pin_high(lcd_cfg(device)->dc_pin);
     spi0_send((const uint8_t *)data, byte_count);
     return byte_count;
@@ -149,6 +173,7 @@ static uint32_t lcd_spi_send_data(painter_device_t device, const void *data, uin
 
 static bool lcd_spi_send_command(painter_device_t device, uint8_t cmd) {
     qp_comms_spi_dc_reset_config_t *cfg = lcd_cfg(device);
+    lcd_spi_claim(device);
     gpio_write_pin_low(cfg->dc_pin);
     spi0_send(&cmd, 1); // возвращается, когда байт полностью ушёл
     return true;

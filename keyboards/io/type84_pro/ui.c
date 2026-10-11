@@ -22,6 +22,7 @@
 #    include "strip.h"
 #    include "snaptap.h"
 #    include "settings.h"
+#    include "screen.h"
 #    include "graphics/tech14.qff.c"
 #    include "graphics/tech20.qff.c"
 #    include "graphics/raj44.qff.c"
@@ -107,19 +108,25 @@ static const struct {
     uint16_t    sec;
 } screen_timeouts[] = {{"OFF", 0}, {"30S", 30}, {"1M", 60}, {"5M", 300}, {"10M", 600}};
 
-static uint8_t accent_idx, scr_to_idx;
+// Что на главном экране: HUD или анимация пользователя из SPI-флеша (screen.c)
+static const char *const screen_modes[UI_SCREEN_MODES] = {"HUD", "ANIMATION"};
+
+static uint8_t accent_idx, scr_to_idx, scr_mode;
 
 static void settings_load(void) {
     accent_idx = kb_settings()->accent;
     scr_to_idx = kb_settings()->screen_timeout;
+    scr_mode   = kb_settings()->screen_mode;
     if (accent_idx >= ARRAY_SIZE(accents)) accent_idx = 0;
     if (scr_to_idx >= ARRAY_SIZE(screen_timeouts)) scr_to_idx = 0;
+    if (scr_mode >= UI_SCREEN_MODES) scr_mode = 0;
     C_ACC = accents[accent_idx].c;
 }
 
 static void settings_save(void) {
     kb_settings()->accent         = accent_idx;
     kb_settings()->screen_timeout = scr_to_idx;
+    kb_settings()->screen_mode    = scr_mode;
     kb_settings_save();
     C_ACC = accents[accent_idx].c;
 }
@@ -166,6 +173,8 @@ enum item_id {
     PW_CHG,
     DS_ACCENT,
     DS_TIMEOUT,
+    DS_SCREEN,
+    DS_ANIM,
     SY_NKRO,
     SY_GUI,
     SY_BOOT,
@@ -214,6 +223,8 @@ static const item_t items_power[] = {
 static const item_t items_display[] = {
     {"ACCENT", IT_ENUM, DS_ACCENT},
     {"SCREEN OFF", IT_ENUM, DS_TIMEOUT},
+    {"MAIN SCREEN", IT_ENUM, DS_SCREEN},
+    {"ANIMATION", IT_INFO, DS_ANIM},
 };
 static const item_t items_system[] = {
     {"NKRO", IT_TOGGLE, SY_NKRO},
@@ -405,6 +416,16 @@ static void item_value(uint8_t id, char *buf, uint8_t len, int16_t *gauge) {
         case DS_TIMEOUT:
             strcpy(buf, screen_timeouts[scr_to_idx].name);
             break;
+        case DS_SCREEN:
+            strcpy(buf, screen_modes[scr_mode]);
+            break;
+        case DS_ANIM:
+            if (screen_frames()) {
+                snprintf(buf, len, "%u FRAMES", screen_frames());
+            } else {
+                strcpy(buf, "NONE");
+            }
+            break;
         case SY_NKRO:
             strcpy(buf, keymap_config.nkro ? "ON" : "OFF");
             break;
@@ -552,6 +573,9 @@ static void item_adjust(uint8_t id, int8_t dir) {
         case DS_TIMEOUT:
             scr_to_idx = (scr_to_idx + ARRAY_SIZE(screen_timeouts) + dir) % ARRAY_SIZE(screen_timeouts);
             settings_save();
+            break;
+        case DS_SCREEN:
+            ui_set_screen_mode((scr_mode + UI_SCREEN_MODES + dir) % UI_SCREEN_MODES);
             break;
         case SY_NKRO:
             toggle_keymap_flag(true);
@@ -727,6 +751,45 @@ static void main_draw(bool all) {
         strcpy(hud.status, status);
         hud.status_c = sc;
     }
+}
+
+/* --------------------------------------------------------------------------
+ * Анимация пользователя и её загрузка
+ * ------------------------------------------------------------------------ */
+
+uint8_t ui_screen_mode(void) {
+    return scr_mode;
+}
+
+void ui_set_screen_mode(uint8_t mode) {
+    if (mode >= UI_SCREEN_MODES) return;
+    scr_mode = mode;
+    settings_save();
+    full_redraw = true;
+}
+
+static bool animation_on(void) {
+    return scr_mode == 1 && screen_frames();
+}
+
+static void upload_draw(bool all, int8_t pct) {
+    if (all) {
+        rect(0, 0, W - 1, H - 1, C_BG, true);
+        text(8, 3, f14, "IO//84", C_ACC, C_BG);
+        text(62, 3, f14, "SCREEN", C_DIM, C_BG);
+        hline(0, W - 1, HEADER_LINE_Y, C_LINE);
+        hline(0, W - 1, FOOTER_LINE_Y, C_LINE);
+        brackets(6, 28, W - 7, 142, C_DIM, 6);
+        text(16, 32, f14, "UPLOADING ANIMATION", C_DIM, C_BG);
+        text(8, 154, f14, "DON'T UNPLUG", C_WARN, C_BG);
+        rect(16, 112, W - 17, 128, C_LINE, false);
+    }
+    char b[6];
+    snprintf(b, sizeof(b), "%u%%", pct);
+    rect(14, 46, 200, 98, C_BG, true);
+    text(14, 46, f44, b, C_ACC, C_BG);
+    int x = 18 + (W - 37) * pct / 100;
+    rect(18, 114, x, 126, C_ACC, true);
 }
 
 /* --------------------------------------------------------------------------
@@ -1089,7 +1152,7 @@ void ui_redraw(void) {
 
 static void screen_timeout_task(void) {
     uint16_t to = screen_timeouts[scr_to_idx].sec;
-    bool     idle = to && last_input_activity_elapsed() > (uint32_t)to * 1000;
+    bool     idle = to && last_input_activity_elapsed() > (uint32_t)to * 1000 && screen_upload_progress() < 0;
     if (idle && !screen_dark) {
         screen_dark = true;
         type84_lcd_sleep(true);
@@ -1118,9 +1181,25 @@ void ui_task(void) {
         dirty       = true;
     }
 
+    // загрузка анимации: экран прогресса вместо главного; по окончании — полная перерисовка
+    static int8_t up_pct = -1;
+    int8_t        pct    = screen_upload_progress();
+    if (pct != up_pct) {
+        if (pct < 0 || up_pct < 0) full_redraw = dirty = true;
+        if (pct < 0) screen_play_restart();
+    }
+
     switch (screen) {
         case SCR_MAIN:
-            if (!toast_on || full_redraw) {
+            if (pct >= 0) {
+                if (pct != up_pct || full_redraw) {
+                    upload_draw(up_pct < 0 || full_redraw, pct);
+                    dirty = true;
+                }
+            } else if (animation_on()) {
+                if (full_redraw) screen_play_restart();
+                if (!toast_on) screen_play_task(lcd); // поверх анимации всплывашка стоит, пока видна
+            } else if (!toast_on || full_redraw) {
                 main_draw(full_redraw);
                 dirty = true; // main_draw сам решает, что перерисовать
             }
@@ -1147,6 +1226,7 @@ void ui_task(void) {
             }
             break;
     }
+    up_pct = pct;
     if (toast_on && full_redraw) draw_toast();
     full_redraw = false;
     if (dirty) qp_flush(lcd);

@@ -187,6 +187,9 @@ void armed_raw_hid_receive(uint8_t *data, uint8_t length) {
             eeconfig_force_flush_rgb_matrix();
 #endif
             break;
+        case ARMED_SCREEN_INFO ... ARMED_SCREEN_READ:
+            armed_screen_receive(data, length);
+            return;
         default:
             ok = false;
             break;

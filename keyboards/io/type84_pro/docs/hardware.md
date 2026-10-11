@@ -137,5 +137,5 @@ A separate module on **UART2: TX P1.7 `B7`, RX P1.6 `B6`**, 115200 8N1. Protocol
 
 | | |
 |---|---|
-| SPI flash | two chips on SPI1 (SCK P0.12, MOSI P1.11, MISO P1.10, CS P1.9 / P0.13) — stock screen images and animations; not used by this firmware |
+| SPI flash | two SPI NOR chips on SPI1 (16 MiB each going by the stock addressing) (SCK P0.12, MOSI P1.11, MISO P1.10), mode 0, 24 MHz. CS P0.13: stock built-in images, read-only here. CS P1.9: the user animation from address 0 — 256-byte header (`[0]` frames ≤ 152, `[1 + i]` delay in 2 ms units) + 320×172 RGB565 frames, low byte first, 110080 bytes each; the stock firmware never writes at 0xFF5000 or above. Frames go to the display through SPI0's SPI-to-SPI DMA (stock `sub_107b6`), low byte first as stored. `spiflash.c`, `screen.c` |
 | Unused pins | P0.3, P1.0, P1.1, P1.3, P2.15, P3.3, P3.4 (pulled up like the stock firmware does) |

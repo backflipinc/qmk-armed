@@ -11,6 +11,7 @@
 #include "strip.h"
 #include "snaptap.h"
 #include "settings.h"
+#include "spiflash.h"
 
 void safety_wdt_feed(void); // safety.c
 
@@ -20,6 +21,7 @@ void safety_wdt_feed(void); // safety.c
 #    include "qp_internal.h"
 extern const painter_comms_with_command_vtable_t lcd_spi_comms_vtable; // lcd_spi.c
 #    include "ui.h"
+#    include "screen.h"
 #endif
 
 /* --------------------------------------------------------------------------
@@ -331,7 +333,9 @@ void keyboard_post_init_kb(void) {
     colors_load();
     strip_init();
     snaptap_init();
+    spiflash_init();
 #ifdef QUANTUM_PAINTER_ENABLE
+    screen_init(); // анимация пользователя во флеше — до первой отрисовки
     safety_wdt_feed();
     lcd_init();
     safety_wdt_feed();
@@ -418,6 +422,7 @@ void suspend_power_down_kb(void) {
     if (!lcd_asleep) { // вызывается на каждом проходе цикла сна — гасим один раз
         lcd_asleep = true;
         gpio_write_pin_low(LCD_BL_PIN);
+        spiflash_power(false);
 #ifdef QUANTUM_PAINTER_ENABLE
         qp_power(lcd, false);
 #endif
@@ -427,6 +432,7 @@ void suspend_power_down_kb(void) {
 
 void suspend_wakeup_init_kb(void) {
     lcd_asleep = false;
+    spiflash_power(true);
 #ifdef QUANTUM_PAINTER_ENABLE
     qp_power(lcd, true);
     gpio_write_pin_high(LCD_BL_PIN);

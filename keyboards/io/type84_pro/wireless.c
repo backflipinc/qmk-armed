@@ -23,6 +23,7 @@
 #include "type84_pro.h"
 #include "battery.h"
 #include "ledscan.h"
+#include "spiflash.h"
 #include "settings.h"
 
 #ifndef USB_GETSTATUS_REMOTE_WAKEUP_ENABLED
@@ -574,6 +575,7 @@ static void deep_sleep(void) {
     flush_uart_tx(100);
 
     type84_lcd_sleep(true);
+    spiflash_power(false);
     ledscan_stop(); // подсветка off, колонки — GPIO (иначе их держит ШИМ)
 
     bool usb_was_on = !usb_stopped;
@@ -646,6 +648,7 @@ static void deep_sleep(void) {
     battery_sent = 0xFF;
     send_battery(battery_get_percent());
 
+    spiflash_power(true);
     type84_lcd_sleep(false);
     dprintf("WL wake\n");
 }
