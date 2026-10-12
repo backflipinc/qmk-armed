@@ -20,7 +20,7 @@ SRC += wireless.c
 # Батарея: счётчик заряда CW2017 на программном I²C (P0.14/P0.15)
 BATTERY_ENABLE = yes
 BATTERY_DRIVER = custom
-SRC += battery_cw2017.c
+SRC += battery_cw2017.c rtc_bm8563.c
 
 # Заряд по USB: HID Battery Strength
 HID_BATTERY_ENABLE = yes

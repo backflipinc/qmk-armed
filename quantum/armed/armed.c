@@ -152,6 +152,63 @@ static bool set_value(uint8_t id, uint8_t v) {
     }
 }
 
+__attribute__((weak)) bool armed_clock_get_kb(armed_time_t *t) {
+    return false;
+}
+
+__attribute__((weak)) bool armed_clock_set_kb(const armed_time_t *t) {
+    return false;
+}
+
+// days_from_civil / civil_from_days, Howard Hinnant
+static uint32_t days_from_civil(uint16_t y, uint8_t m, uint8_t d) {
+    y -= m <= 2;
+    uint32_t era = y / 400;
+    uint32_t yoe = y - era * 400;
+    uint32_t doy = (153 * (m > 2 ? m - 3 : m + 9) + 2) / 5 + d - 1;
+    uint32_t doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    return era * 146097 + doe - 719468;
+}
+
+static void civil_from_days(uint32_t days, armed_time_t *t) {
+    uint32_t z   = days + 719468;
+    uint32_t era = z / 146097;
+    uint32_t doe = z - era * 146097;
+    uint32_t yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    uint32_t doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    uint32_t mp  = (5 * doy + 2) / 153;
+    t->day       = doy - (153 * mp + 2) / 5 + 1;
+    t->month     = mp < 10 ? mp + 3 : mp - 9;
+    t->year      = yoe + era * 400 + (t->month <= 2);
+    t->weekday   = (days + 3) % 7;
+}
+
+bool armed_clock_now(armed_time_t *t) {
+    if (!armed_clock_get_kb(t)) return false;
+    t->weekday = (days_from_civil(t->year, t->month, t->day) + 3) % 7;
+    return true;
+}
+
+static void clock_get(uint8_t *data) {
+    armed_time_t t;
+    uint32_t     s = 0;
+    data[2]        = armed_clock_get_kb(&t);
+    if (data[2]) s = days_from_civil(t.year, t.month, t.day) * 86400 + t.hour * 3600UL + t.minute * 60 + t.second;
+    memcpy(&data[3], &s, 4);
+}
+
+static bool clock_set(const uint8_t *data) {
+    uint32_t     s;
+    armed_time_t t;
+    memcpy(&s, &data[2], 4);
+    civil_from_days(s / 86400, &t);
+    s %= 86400;
+    t.hour   = s / 3600;
+    t.minute = s / 60 % 60;
+    t.second = s % 60;
+    return armed_clock_set_kb(&t);
+}
+
 static void info(uint8_t *data) {
     uint16_t f = features();
     data[2]    = 'A';
@@ -196,6 +253,12 @@ void armed_raw_hid_receive(uint8_t *data, uint8_t length) {
         case ARMED_THEME_INFO ... ARMED_THEME_REVERT:
             armed_theme_receive(data, length);
             return;
+        case ARMED_CLOCK_GET:
+            clock_get(data);
+            break;
+        case ARMED_CLOCK_SET:
+            ok = clock_set(data);
+            break;
         default:
             ok = false;
             break;

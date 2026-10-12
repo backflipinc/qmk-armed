@@ -17,6 +17,7 @@ How the port is put together, what was tricky, and how to change things.
 | `type84_pro.c` | board init (SWD off, PFPA, pull-ups), display init, colours, Fn-layer overlay, USB battery report, hooks |
 | `wireless.c` | radio module: mode switch, BT slots, pairing, reports, NKRO over the air, auto-sleep |
 | `battery_cw2017.c` | fuel gauge over bit-banged I²C, VBUS / charge status |
+| `rtc_bm8563.c` | the RTC chip on the same I²C bus: the HUD clock, set by Vial Armed |
 | `safety.c` | Esc-on-plug bootloader check, watchdog, `bootloader_jump()` |
 | `snaptap.c` | the SnapTap switch: SOCD for A/D and W/S |
 | `settings.c` | keyboard settings in the EEPROM kb datablock |
@@ -91,6 +92,7 @@ QMK *kb datablock* as one struct, `kb_settings_t` (`settings.h`, 32 bytes reserv
 | `color2`, `fn_color` | colour 2 and Fn overlay colour (preset index) |
 | `strip_mode`, `strip_color`, `strip_caps_alert` | light bar |
 | `snaptap_mode` | SnapTap: last input / neutral |
+| `screen_mode`, `clock_format` | main screen (HUD / animation), HUD clock (24H / 12H / off) |
 
 Changing the struct layout means bumping `EECONFIG_KB_DATA_VERSION` in `config.h`: a version
 mismatch resets these settings to defaults. Changing the wear-leveling sizes moves the

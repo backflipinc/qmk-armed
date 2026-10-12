@@ -11,8 +11,8 @@
 #define ARMED_PROTOCOL 1
 
 #define ARMED_VERSION_MAJOR 1
-#define ARMED_VERSION_MINOR 3
-#define ARMED_VERSION_PATCH 1
+#define ARMED_VERSION_MINOR 4
+#define ARMED_VERSION_PATCH 0
 
 enum armed_command {
     ARMED_INFO,
@@ -30,6 +30,8 @@ enum armed_command {
     ARMED_THEME_WRITE,
     ARMED_THEME_SAVE,
     ARMED_THEME_REVERT,
+    ARMED_CLOCK_GET,
+    ARMED_CLOCK_SET,
 };
 
 enum armed_feature {
@@ -40,6 +42,7 @@ enum armed_feature {
     ARMED_F_SLEEP      = 1 << 4,
     ARMED_F_SCREEN     = 1 << 5,
     ARMED_F_THEMES     = 1 << 6,
+    ARMED_F_CLOCK      = 1 << 7,
 };
 
 enum armed_list {
@@ -65,6 +68,7 @@ enum armed_value {
     ARMED_V_VAL,
     ARMED_V_SPEED,
     ARMED_V_SCREEN,
+    ARMED_V_CLOCK,
 };
 
 // effect flags in the effect list
@@ -116,3 +120,14 @@ bool armed_theme_uses_layers(uint8_t slot);
 
 bool armed_theme_load_kb(uint8_t slot, uint8_t *data, uint16_t size);
 bool armed_theme_save_kb(uint8_t slot, const uint8_t *data, uint16_t size);
+
+// ARMED_F_CLOCK: the keyboard keeps local wall time, on the wire as seconds since 1970-01-01 in the host's time zone
+typedef struct {
+    uint16_t year;
+    uint8_t  month, day, weekday; // weekday 0 = Monday, filled in by armed_clock_now
+    uint8_t  hour, minute, second;
+} armed_time_t;
+
+bool armed_clock_now(armed_time_t *t);
+bool armed_clock_get_kb(armed_time_t *t);
+bool armed_clock_set_kb(const armed_time_t *t);

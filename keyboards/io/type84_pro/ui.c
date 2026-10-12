@@ -113,16 +113,19 @@ static const struct {
 
 // Что на главном экране: HUD или анимация пользователя из SPI-флеша (screen.c)
 static const char *const screen_modes[UI_SCREEN_MODES] = {"HUD", "ANIMATION"};
+static const char *const clock_formats[UI_CLOCK_FORMATS] = {"24H", "12H", "OFF"};
 
-static uint8_t accent_idx, scr_to_idx, scr_mode;
+static uint8_t accent_idx, scr_to_idx, scr_mode, clock_fmt;
 
 static void settings_load(void) {
     accent_idx = kb_settings()->accent;
     scr_to_idx = kb_settings()->screen_timeout;
     scr_mode   = kb_settings()->screen_mode;
+    clock_fmt  = kb_settings()->clock_format;
     if (accent_idx >= ARRAY_SIZE(accents)) accent_idx = 0;
     if (scr_to_idx >= ARRAY_SIZE(screen_timeouts)) scr_to_idx = 0;
     if (scr_mode >= UI_SCREEN_MODES) scr_mode = 0;
+    if (clock_fmt >= UI_CLOCK_FORMATS) clock_fmt = 0;
     C_ACC = accents[accent_idx].c;
 }
 
@@ -130,6 +133,7 @@ static void settings_save(void) {
     kb_settings()->accent         = accent_idx;
     kb_settings()->screen_timeout = scr_to_idx;
     kb_settings()->screen_mode    = scr_mode;
+    kb_settings()->clock_format   = clock_fmt;
     kb_settings_save();
     C_ACC = accents[accent_idx].c;
 }
@@ -177,6 +181,7 @@ enum item_id {
     DS_ACCENT,
     DS_TIMEOUT,
     DS_SCREEN,
+    DS_CLOCK,
     DS_ANIM,
     SY_NKRO,
     SY_GUI,
@@ -227,6 +232,9 @@ static const item_t items_display[] = {
     {"ACCENT", IT_ENUM, DS_ACCENT},
     {"SCREEN OFF", IT_ENUM, DS_TIMEOUT},
     {"MAIN SCREEN", IT_ENUM, DS_SCREEN},
+#    ifdef ARMED_ENABLE
+    {"CLOCK", IT_ENUM, DS_CLOCK},
+#    endif
     {"ANIMATION", IT_INFO, DS_ANIM},
 };
 static const item_t items_system[] = {
@@ -429,6 +437,9 @@ static void item_value(uint8_t id, char *buf, uint8_t len, int16_t *gauge) {
         case DS_SCREEN:
             strcpy(buf, screen_modes[scr_mode]);
             break;
+        case DS_CLOCK:
+            strcpy(buf, clock_formats[clock_fmt]);
+            break;
         case DS_ANIM:
             if (screen_frames()) {
                 snprintf(buf, len, "%u FRAMES", screen_frames());
@@ -587,6 +598,9 @@ static void item_adjust(uint8_t id, int8_t dir) {
         case DS_SCREEN:
             ui_set_screen_mode((scr_mode + UI_SCREEN_MODES + dir) % UI_SCREEN_MODES);
             break;
+        case DS_CLOCK:
+            ui_set_clock_format((clock_fmt + UI_CLOCK_FORMATS + dir) % UI_CLOCK_FORMATS);
+            break;
         case SY_NKRO:
             toggle_keymap_flag(true);
             break;
@@ -636,6 +650,8 @@ static struct {
     uint8_t tiles;
     char    status[24];
     col_t   status_c;
+    char    time[8];
+    char    date[12];
 } hud;
 
 static void battery_icon(int x, int y, uint8_t pct, bool chg) {
@@ -678,6 +694,32 @@ static void link_info(char *label, bool *ok, char *status, col_t *sc) {
     }
 }
 
+#    ifdef ARMED_ENABLE
+static void clock_draw(void) {
+    static const char *const days[]   = {"MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"};
+    static const char *const months[] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
+    char         t[8], d[12];
+    armed_time_t now;
+    bool         ok = armed_clock_now(&now);
+    if (!ok) {
+        strcpy(t, "--:--");
+        strcpy(d, "NO SYNC");
+    } else if (clock_fmt == 1) {
+        snprintf(t, sizeof(t), "%u:%02u", now.hour % 12 ? now.hour % 12 : 12, now.minute);
+        snprintf(d, sizeof(d), "%s %s %u", now.hour < 12 ? "AM" : "PM", days[now.weekday], now.day);
+    } else {
+        snprintf(t, sizeof(t), "%02u:%02u", now.hour, now.minute);
+        snprintf(d, sizeof(d), "%s %u %s", days[now.weekday], now.day, months[now.month - 1]);
+    }
+    if (!strcmp(t, hud.time) && !strcmp(d, hud.date)) return;
+    rect(52, 114, 204, 136, C_BG, true);
+    text(52, 114, f20, t, ok ? C_TXT : C_LINE, C_BG);
+    text(118, 118, f14, d, C_DIM, C_BG);
+    strcpy(hud.time, t);
+    strcpy(hud.date, d);
+}
+#    endif
+
 static void main_draw(bool all) {
     char  link[6], status[24];
     bool  link_ok = false;
@@ -698,8 +740,10 @@ static void main_draw(bool all) {
         hline(0, W - 1, FOOTER_LINE_Y, C_LINE);
         brackets(6, 28, 206, 142, C_DIM, 6);
         text(16, 32, f14, "LAYER", C_DIM, C_BG);
-        text(16, 104, f14, "WPM", C_DIM, C_BG);
-        text(110, 104, f14, "BAT", C_DIM, C_BG);
+        text(16, 92, f14, "WPM", C_DIM, C_BG);
+        text(110, 92, f14, "BAT", C_DIM, C_BG);
+        if (clock_fmt != 2) text(16, 118, f14, "TIME", C_DIM, C_BG);
+        hud.time[0] = 0;
         text_r(W - 8, 154, f14, "FN+ENT  MENU", C_DIM, C_BG);
     }
 
@@ -716,7 +760,7 @@ static void main_draw(bool all) {
 
     // слой крупно
     if (all || layer != hud.layer) {
-        rect(14, 46, 200, 98, C_BG, true);
+        rect(14, 46, 200, 87, C_BG, true);
         char        b[6];
         const char *n = layer == 0 ? "BASE" : layer == 1 ? "FN" : b;
         if (layer > 1) snprintf(b, sizeof(b), "L%u", layer);
@@ -728,16 +772,24 @@ static void main_draw(bool all) {
     if (all || wpm != hud.wpm) {
         char b[6];
         snprintf(b, sizeof(b), "%03u", wpm);
-        text(52, 100, f20, b, C_ACC, C_BG);
+        text(52, 88, f20, b, C_ACC, C_BG);
         hud.wpm = wpm;
     }
     if (all || mv / 10 != hud.mv / 10) {
         char b[8];
         snprintf(b, sizeof(b), "%u.%02uV", mv / 1000, (mv % 1000) / 10);
-        rect(146, 100, 204, 122, C_BG, true);
-        text(146, 100, f20, b, C_TXT, C_BG);
+        rect(146, 88, 204, 108, C_BG, true);
+        text(146, 88, f20, b, C_TXT, C_BG);
         hud.mv = mv;
     }
+
+#    ifdef ARMED_ENABLE
+    static uint16_t clock_at;
+    if (clock_fmt != 2 && (all || timer_elapsed(clock_at) > 500)) {
+        clock_at = timer_read();
+        clock_draw();
+    }
+#    endif
 
     // плашки состояний
     if (all || tiles != hud.tiles) {
@@ -774,6 +826,17 @@ uint8_t ui_screen_mode(void) {
 void ui_set_screen_mode(uint8_t mode) {
     if (mode >= UI_SCREEN_MODES) return;
     scr_mode = mode;
+    settings_save();
+    full_redraw = true;
+}
+
+uint8_t ui_clock_format(void) {
+    return clock_fmt;
+}
+
+void ui_set_clock_format(uint8_t format) {
+    if (format >= UI_CLOCK_FORMATS) return;
+    clock_fmt = format;
     settings_save();
     full_redraw = true;
 }

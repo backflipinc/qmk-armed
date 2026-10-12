@@ -124,6 +124,27 @@ static uint8_t i2c_read_byte(bool ack) {
     return b;
 }
 
+// Shared with the RTC (rtc_bm8563.c), same bus
+bool kb_i2c_read(uint8_t addr, uint8_t reg, uint8_t *buf, uint8_t n) {
+    i2c_start();
+    bool ok = i2c_write_byte(addr) && i2c_write_byte(reg);
+    if (ok) {
+        i2c_start();
+        ok = i2c_write_byte(addr | 1);
+        for (uint8_t i = 0; ok && i < n; i++) buf[i] = i2c_read_byte(i + 1 < n);
+    }
+    i2c_stop();
+    return ok;
+}
+
+bool kb_i2c_write(uint8_t addr, uint8_t reg, const uint8_t *buf, uint8_t n) {
+    i2c_start();
+    bool ok = i2c_write_byte(addr) && i2c_write_byte(reg);
+    for (uint8_t i = 0; ok && i < n; i++) ok = i2c_write_byte(buf[i]);
+    i2c_stop();
+    return ok;
+}
+
 static bool cw_read(uint8_t reg, uint8_t *val) {
     i2c_start();
     bool ok = i2c_write_byte(CW_ADDR_W) && i2c_write_byte(reg);

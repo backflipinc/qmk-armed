@@ -129,6 +129,7 @@ A separate module on **UART2: TX P1.7 `B7`, RX P1.6 `B6`**, 115200 8N1. Protocol
 | | |
 |---|---|
 | Fuel gauge | CellWise **CW2017**-compatible at I²C `0x63`, bit-banged: SCL P0.14 `A14`, SDA P0.15 `A15`. SoC = `(reg4·256 + reg5)·100 / 0x6000`, voltage = `reg2..3 × 5/16 mV`; needs the 80-byte battery profile in regs `0x10–0x5F` (in `battery_cw2017.c`) |
+| RTC | BM8563 / PCF8563-compatible at I²C `0x51` (`0xA2`) on the same bus, own crystal, runs on the battery. Time in BCD regs `0x02–0x08` (seconds bit 7 = oscillator stopped, time invalid); stock reads it at start-up and sets it from the configurator (command `0x34`). `rtc_bm8563.c` |
 | USB power | P1.17 `B17`, **low** = VBUS present |
 | Charge status | P1.16 `B16`, **high** = charge complete |
 | Wake inputs | P0.10, P1.2 — wake the stock firmware from sleep but are never read; source unknown ⚠️ |

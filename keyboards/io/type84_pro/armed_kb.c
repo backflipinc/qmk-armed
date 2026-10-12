@@ -35,7 +35,7 @@ bool armed_theme_save_kb(uint8_t slot, const uint8_t *data, uint16_t size) {
 uint16_t armed_features_kb(void) {
     uint16_t f = ARMED_F_COLOR2 | ARMED_F_FN_COLOR | ARMED_F_STRIP | ARMED_F_SLEEP;
 #    ifdef QUANTUM_PAINTER_ENABLE
-    f |= ARMED_F_SCREEN;
+    f |= ARMED_F_SCREEN | ARMED_F_CLOCK;
 #    endif
     return f;
 }
@@ -97,6 +97,9 @@ bool armed_get_value_kb(uint8_t id, uint8_t *out) {
         case ARMED_V_SCREEN:
             *out = ui_screen_mode();
             return true;
+        case ARMED_V_CLOCK:
+            *out = ui_clock_format();
+            return true;
 #    endif
     }
     return false;
@@ -131,6 +134,10 @@ bool armed_set_value_kb(uint8_t id, uint8_t v) {
         case ARMED_V_SCREEN:
             if (v >= UI_SCREEN_MODES) return false;
             ui_set_screen_mode(v);
+            return true;
+        case ARMED_V_CLOCK:
+            if (v >= UI_CLOCK_FORMATS) return false;
+            ui_set_clock_format(v);
             return true;
 #    endif
     }

@@ -18,7 +18,7 @@ reporting and auto-sleep all keep working. See [how it compares with the stock f
 | | |
 |---|---|
 | ⌨️ **Keys** | Full 84-key layout, NKRO over USB **and** Bluetooth / 2.4 GHz (on by default), QMK keymaps |
-| 🧩 **Vial** | Built in: remap keys and knobs, macros, combos, tap dance and key overrides live, no reflashing. [Vial Armed](https://github.com/backflipinc/vial-gui-armed) also sets the two-colour effects, lighting themes, light bar, Fn colour, auto-sleep and the screen animation |
+| 🧩 **Vial** | Built in: remap keys and knobs, macros, combos, tap dance and key overrides live, no reflashing. [Vial Armed](https://github.com/backflipinc/vial-gui-armed) also sets the two-colour effects, lighting themes, light bar, Fn colour, auto-sleep, the clock and the screen animation |
 | 🎛️ **Knob** | The removable knob works in both spots (Esc or PrtSc): volume, mute, next/prev track on Fn |
 | 🖥️ **Display** | 320×172 HUD: layer, WPM, battery, link status, lock indicators — plus a full settings menu. Or your own picture, GIF or video |
 | 🌈 **RGB** | Per-key RGB with 30+ effects, including 7 custom **two-colour** effects; black is a colour too |
@@ -40,7 +40,7 @@ Compared with the official firmware v1.32 and its web configurator (`web.io.visi
 | | Stock | This firmware |
 |---|---|---|
 | Settings | web configurator (WebHID, Chromium browsers only) | on-device menu on the LCD — no PC or browser needed; Vial for keymaps; [Vial Armed](https://github.com/backflipinc/vial-gui-armed) desktop app for keymaps and lighting with a live preview |
-| Screen | images / animations, page switching | live HUD: layer, WPM, battery %, voltage, link, lock and SnapTap state; settings menu; screen-off timeout; or your own animation, uploaded from Vial Armed or `tools/screen.py` |
+| Screen | images / animations, page switching | live HUD: layer, WPM, battery %, voltage, clock, link, lock and SnapTap state; settings menu; screen-off timeout; or your own animation, uploaded from Vial Armed or `tools/screen.py` |
 | Bluetooth hosts | 3 | 5 |
 | Battery in the OS | Bluetooth / 2.4 GHz | also over USB (Linux: `upower`, desktop widgets) |
 | Keymap power | remap, macros, mod-tap, toggle, key combos | everything QMK has: up to 4 layers live in Vial, tap dance, combos, key overrides, caps word, layer lock, repeat key, auto shift, per-key tapping settings; any QMK feature in code |
@@ -52,7 +52,6 @@ Compared with the official firmware v1.32 and its web configurator (`web.io.visi
 
 **What stock has and this firmware doesn't (yet)**
 
-- A clock on the screen synced from the PC.
 - Key response time (debounce) adjustable at runtime.
 - Win / Mac mode switch (Fn+M) and Cmd lock.
 - Configurable SnapTap pairs and the two "key priority" modes — fixed to A/D and W/S, last input or neutral, for now.
@@ -116,7 +115,7 @@ keyboard disconnects from USB, just like the stock firmware (the cable only char
 | **SNAPTAP** | switch state, mode (last input / neutral), key pairs |
 | **WIRELESS** | current mode, Bluetooth slot, pair now |
 | **POWER** | auto-sleep timer, battery %, voltage, charging status |
-| **DISPLAY** | UI accent colour (amber, green, cyan, red, white), screen-off timeout |
+| **DISPLAY** | UI accent colour (amber, green, cyan, red, white), screen-off timeout, main screen, clock (24H / 12H / off) |
 | **SYSTEM** | NKRO, Win lock, bootloader, factory reset (both with a confirmation) |
 | **ABOUT** | firmware, build date, MCU, uptime |
 
@@ -168,7 +167,7 @@ regular Vial keeps working as before.
 ## Status and limitations
 
 - Tested on one keyboard (stock firmware v1.32), on Linux.
-- Raw HID host data on the screen (clock, CPU load, …) is not implemented yet.
+- The clock is set by Vial Armed when it connects (the RTC chip keeps it through sleep and unplugging); other host data on the screen (CPU load, …) is not implemented yet.
 - The SPI flash with the stock screen animations is not used.
 - Vial works over USB only; in BT / 2.4 GHz the keyboard is off the USB bus.
 - System power keys and mouse keys are not sent over the air (format unverified).

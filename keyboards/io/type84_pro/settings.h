@@ -15,6 +15,7 @@ typedef struct {
     bool    strip_caps_alert;
     uint8_t snaptap_mode;
     uint8_t screen_mode; // appended without a version bump: validated on load
+    uint8_t clock_format;
 } kb_settings_t;
 
 kb_settings_t *kb_settings(void);

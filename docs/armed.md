@@ -31,6 +31,7 @@ Anything beyond RGB Matrix is a feature the keyboard declares and implements thr
 | `ARMED_F_SLEEP` | sleep options | auto-sleep option |
 | `ARMED_F_SCREEN` | — | what the main screen shows; plus the screen animation upload below |
 | `ARMED_F_THEMES` (set by the core) | — | lighting themes, see below |
+| `ARMED_F_CLOCK` | — | clock format; plus the clock commands below |
 
 ```c
 #include "armed.h"
@@ -67,6 +68,13 @@ bool armed_set_value_kb(uint8_t id, uint8_t value) {
 `ARMED_EFFECT_THEME` to theme slots.
 See `keyboards/io/type84_pro/armed_kb.c` for a keyboard that implements all of them.
 
+## Clock
+
+The time travels as seconds since 1970-01-01 **in the host's time zone**, so the keyboard needs no zone or DST
+rules; the core converts it to a date and calls `armed_clock_get_kb` / `armed_clock_set_kb`, the keyboard keeps it
+(the IO Type 84 Pro has an RTC chip). Hosts send it right after a second ticks over: the keyboard counts whole
+seconds. `armed_clock_now()` gives the date with the weekday for drawing it.
+
 ## Wire format
 
 Requests and replies are 32 bytes: `[0xAD, command, ...]`. Command `0xAD` is unused by VIA and Vial.
@@ -89,6 +97,8 @@ A request the firmware can't serve comes back with `0xFF` (`id_unhandled`) in th
 | `12` THEME_WRITE | `[2]` slot, `[3..4]` offset, `[5]` length (≤ 26), `[6..]` bytes | shown at once, not stored |
 | `13` THEME_SAVE | `[2]` slot | stored |
 | `14` THEME_REVERT | `[2]` slot | edits dropped, the stored theme is back |
+| `15` CLOCK_GET | — | `[2]` 1 = the time is set, `[3..6]` local time (LE) |
+| `16` CLOCK_SET | `[2..5]` local time (LE) | stored |
 
 Lists:
 
@@ -102,7 +112,7 @@ Lists:
 
 Values: `0` lighting on, `1` effect (QMK mode id), `2` colour 2, `3` Fn colour, `4` light bar mode,
 `5` light bar colour, `6` Caps alert, `7` sleep option, `8` hue, `9` saturation, `10` brightness, `11` speed,
-`12` main screen (0 = HUD, 1 = the uploaded animation).
+`12` main screen (0 = HUD, 1 = the uploaded animation), `13` clock (0 = 24H, 1 = 12H, 2 = off).
 Colours are indexes into the colour preset list.
 
 Hue, saturation, brightness and speed skip EEPROM writes, so a slider can stream them; the app sends SAVE
