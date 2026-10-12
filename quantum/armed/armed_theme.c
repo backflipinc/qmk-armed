@@ -157,6 +157,17 @@ bool armed_theme_name(uint8_t slot, char *buf, uint8_t length) {
 }
 
 
+bool armed_theme_uses_layers(uint8_t slot) {
+    if (slot >= ARMED_THEMES) return false;
+    ready();
+    const theme_t *t = &themes[slot];
+    for (uint8_t i = 0; i < MIN(t->layers, LAYERS); i++) {
+        const layer_t *l = &t->layer[i];
+        if (l->type != T_NONE && !(l->flags & F_HIDDEN) && (l->cond & 0xF0) & (C_LAYER | C_NOT_LAYER)) return true;
+    }
+    return false;
+}
+
 typedef struct {
     bool    on;
     uint8_t phase;
@@ -423,6 +434,10 @@ int8_t armed_theme_slot(uint8_t mode) {
 }
 
 bool armed_theme_name(uint8_t slot, char *buf, uint8_t length) {
+    return false;
+}
+
+bool armed_theme_uses_layers(uint8_t slot) {
     return false;
 }
 

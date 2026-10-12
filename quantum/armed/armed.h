@@ -12,7 +12,7 @@
 
 #define ARMED_VERSION_MAJOR 1
 #define ARMED_VERSION_MINOR 3
-#define ARMED_VERSION_PATCH 0
+#define ARMED_VERSION_PATCH 1
 
 enum armed_command {
     ARMED_INFO,
@@ -112,6 +112,7 @@ bool armed_screen_read_kb(uint32_t offset, uint8_t *data, uint16_t length);
 void armed_theme_receive(uint8_t *data, uint8_t length);
 int8_t armed_theme_slot(uint8_t mode);
 bool armed_theme_name(uint8_t slot, char *buf, uint8_t length);
+bool armed_theme_uses_layers(uint8_t slot);
 
 bool armed_theme_load_kb(uint8_t slot, uint8_t *data, uint16_t size);
 bool armed_theme_save_kb(uint8_t slot, const uint8_t *data, uint16_t size);

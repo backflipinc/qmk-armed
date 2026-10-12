@@ -11,6 +11,9 @@
 #include "strip.h"
 #include "snaptap.h"
 #include "settings.h"
+#ifdef ARMED_ENABLE
+#    include "armed.h"
+#endif
 #include "spiflash.h"
 
 void safety_wdt_feed(void); // safety.c
@@ -277,6 +280,11 @@ bool type84_is_black(hsv_t c) {
 static bool fn_layer_overlay(uint8_t led_min, uint8_t led_max) {
     uint8_t layer = get_highest_layer(layer_state);
     if (layer == 0) return false;
+#ifdef ARMED_ENABLE
+    // A theme with layer conditions draws the Fn layer itself
+    int8_t slot = armed_theme_slot(rgb_matrix_get_mode());
+    if (slot >= 0 && armed_theme_uses_layers(slot)) return false;
+#endif
 
     uint8_t v = rgb_matrix_get_val();
     if (v < 100) v = 100; // видно даже при малой яркости
