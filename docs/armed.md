@@ -30,6 +30,7 @@ Anything beyond RGB Matrix is a feature the keyboard declares and implements thr
 | `ARMED_F_STRIP` | colours, light bar modes | light bar mode, colour, Caps Lock alert |
 | `ARMED_F_SLEEP` | sleep options | auto-sleep option |
 | `ARMED_F_SCREEN` | — | what the main screen shows; plus the screen animation upload below |
+| `ARMED_F_THEMES` (set by the core) | — | lighting themes, see below |
 
 ```c
 #include "armed.h"
@@ -62,7 +63,8 @@ bool armed_set_value_kb(uint8_t id, uint8_t value) {
 }
 ```
 
-`armed_effect_flags_kb(mode)` marks effects that use the second colour (`ARMED_EFFECT_COLOR2`).
+`armed_effect_flags_kb(mode)` marks effects that use the second colour (`ARMED_EFFECT_COLOR2`); the core adds
+`ARMED_EFFECT_THEME` to theme slots.
 See `keyboards/io/type84_pro/armed_kb.c` for a keyboard that implements all of them.
 
 ## Wire format
@@ -82,6 +84,11 @@ A request the firmware can't serve comes back with `0xFF` (`id_unhandled`) in th
 | `7` SCREEN_DATA | `[2]` sequence number, `[3]` length (≤ 28), `[4..]` stream | `[2]` sequence number, `[3]` status (0 = ok), `[4..7]` bytes decoded so far |
 | `8` SCREEN_END | `[2]` 1 = commit, 0 = abort | animation stored |
 | `9` SCREEN_READ | `[2..5]` offset, `[6]` length (≤ 25) | `[7..]` bytes of the stored animation |
+| `10` THEME_INFO | — | `[2]` slots, `[3]` layers per theme, `[4]` LEDs, `[5..6]` theme size (LE), `[7]` format (1), `[8..]` QMK mode id of each slot |
+| `11` THEME_READ | `[2]` slot, `[3..4]` offset, `[5]` length (≤ 26) | `[6..]` bytes of the theme |
+| `12` THEME_WRITE | `[2]` slot, `[3..4]` offset, `[5]` length (≤ 26), `[6..]` bytes | shown at once, not stored |
+| `13` THEME_SAVE | `[2]` slot | stored |
+| `14` THEME_REVERT | `[2]` slot | edits dropped, the stored theme is back |
 
 Lists:
 
@@ -132,3 +139,62 @@ an aborted upload leaves none.
 Keyboard side: implement `armed_screen_info_kb()`, `armed_screen_begin_kb()`, `armed_screen_write_kb()`
 (the decoded animation in order), `armed_screen_end_kb()` and `armed_screen_read_kb()`; see
 `keyboards/io/type84_pro/screen.c`.
+
+## Lighting themes
+
+A theme is a stack of up to 8 layers drawn bottom to top, plus a colour for every LED. Each slot is an
+RGB Matrix effect (`THEME_1`, ...), so it is picked like any other effect; global brightness applies.
+[Vial Armed](https://github.com/backflipinc/vial-gui-armed) has a Themes page that edits them live.
+
+Keyboard side: define `ARMED_THEMES` (1..8 slots) in `config.h`, add `#include "armed_theme_effects.inc"` to
+`rgb_matrix_kb.inc` (under `#ifdef ARMED_ENABLE`) and implement `armed_theme_load_kb()` / `armed_theme_save_kb()`
+for storage (a fixed-size blob per slot). Without storage, themes work until the keyboard is unplugged.
+A slot with nothing valid stored shows a built-in default. See `keyboards/io/type84_pro/armed_kb.c`.
+
+Theme layout, `N` = LED count, `M = (N + 7) / 8`:
+
+| Offset | Size | |
+|---|---|---|
+| 0 | 1 | magic `0xA7` |
+| 1 | 1 | format, `1` |
+| 2 | 1 | layers used |
+| 3 | 1 | 0 |
+| 4 | 16 | name, ASCII, zero-terminated |
+| 20 | 8 × (20 + M) | layers |
+| 20 + 8 × (20 + M) | N × 3 | paint: R, G, B of every LED |
+
+Layer:
+
+| Byte | |
+|---|---|
+| 0 | type: 0 none, 1 solid, 2 gradient, 3 rainbow, 4 pulse, 5 wave, 6 sparkle, 7 reactive, 8 ripple, 9 paint |
+| 1 | blend: 0 normal, 1 add, 2 multiply |
+| 2 | opacity |
+| 3 | speed: the pattern moves by `speed / 256` of its cycle per ms, 0 = still |
+| 4 | direction, a full turn in 256 steps: 0 left to right, 64 top to bottom |
+| 5 | size |
+| 6 | flags: `0x01` from a point (`cx`, `cy`) instead of a direction, `0x02` mirror / bounce, `0x04` reverse, `0x80` hidden |
+| 7 | show when: `0` always, `1` Caps Lock on, `2` Caps Lock off, `0x10 \| n` layer n on, `0x20 \| n` layer n off (n = 0: no layer above the base) |
+| 8..10 | colour A |
+| 11..13 | colour B |
+| 14 | param |
+| 15, 16 | `cx`, `cy` in LED coordinates (0..224, 0..64) |
+| 17..19 | 0 |
+| 20.. | M bytes, bit i: the layer covers LED i |
+
+Each layer gives every LED it covers a colour and a coverage, then blends it over what is below:
+
+| Type | Colour | Coverage |
+|---|---|---|
+| solid | A | full |
+| gradient | A → B along the position; `size` 128 = once across the keyboard, mirror = A → B → A | full |
+| rainbow | hue along the position, `param` = saturation | full |
+| pulse | A ↔ B on a sine wave, shifted by position when `size` > 0 | full |
+| wave | A | a band `size / 2` wide that moves along the position |
+| sparkle | random mix of A and B | random LEDs flash; `speed` = how often, `size` = how slowly they fade |
+| reactive | A | pressed keys, fading in `100 + 8 × size` ms; `param` = radius around the key, 0 = the key only |
+| ripple | A | rings from key presses, `4 + size / 8` wide, growing at `speed` |
+| paint | the LED's paint colour | full |
+
+`armed_theme.c` is the reference; Vial Armed's `theme_render.py` draws the same frames bit for bit (sparkle aside,
+it is random).

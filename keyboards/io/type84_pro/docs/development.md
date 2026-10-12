@@ -8,7 +8,7 @@ How the port is put together, what was tricky, and how to change things.
 |---|---|
 | `keyboard.json` | MCU, USB ids, layout (82 keys + 2 knob presses), RGB Matrix LED list, effects, encoders |
 | `ledscan.c` | **Key matrix + RGB** in one timer interrupt (see below); custom RGB Matrix driver |
-| `rgb_matrix_kb.inc` | custom two-colour effects |
+| `rgb_matrix_kb.inc` | custom two-colour effects, plus the theme slots from `quantum/armed/armed_theme_effects.inc` |
 | `strip.c` | the 9-LED light bar under the display |
 | `ui.c` | display UI: home screen, menu, toasts, confirmations |
 | `lcd_spi.c` | Quantum Painter ↔ ST7789 transport on raw SPI0 registers |
@@ -20,7 +20,7 @@ How the port is put together, what was tricky, and how to change things.
 | `safety.c` | Esc-on-plug bootloader check, watchdog, `bootloader_jump()` |
 | `snaptap.c` | the SnapTap switch: SOCD for A/D and W/S |
 | `settings.c` | keyboard settings in the EEPROM kb datablock |
-| `armed_kb.c` | qmk-armed features for Vial Armed: colours, Fn colour, light bar, auto-sleep, main screen (built with VIA / Vial only) |
+| `armed_kb.c` | qmk-armed features for Vial Armed: colours, Fn colour, light bar, auto-sleep, main screen, theme storage in the user flash chip (built with VIA / Vial only) |
 | `chconf.h`, `halconf.h`, `mcuconf.h`, `config.h`, `rules.mk` | configuration |
 | `graphics/` | QFF fonts generated from `graphics/fonts/` |
 | `docs/`, `udev/`, `flash.sh`, `tools/` | documentation, udev rules, flasher wrapper, `vial.json` generator, `screen.py` animation uploader |
@@ -102,8 +102,9 @@ The RGB Matrix, keymap (NKRO, Win lock) and connection settings use QMK's own EE
 
 [Vial Armed](https://github.com/backflipinc/vial-gui-armed) reads and changes settings over the
 [qmk-armed protocol](../../../../docs/armed.md). The core covers RGB Matrix; `armed_kb.c` declares
-`ARMED_F_COLOR2`, `ARMED_F_FN_COLOR`, `ARMED_F_STRIP` and `ARMED_F_SLEEP` and maps them onto the
-settings above. All custom effects from `rgb_matrix_kb.inc` are flagged as two-colour.
+`ARMED_F_COLOR2`, `ARMED_F_FN_COLOR`, `ARMED_F_STRIP`, `ARMED_F_SLEEP` and `ARMED_F_SCREEN` and maps them onto the
+settings above. All custom effects from `rgb_matrix_kb.inc` except the theme slots are flagged as two-colour.
+`ARMED_THEMES 4` in `config.h` turns on the lighting themes; they are stored at 0xFFC000 on the user flash chip.
 
 ## Keymaps
 

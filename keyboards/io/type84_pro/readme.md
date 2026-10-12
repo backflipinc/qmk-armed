@@ -18,10 +18,11 @@ reporting and auto-sleep all keep working. See [how it compares with the stock f
 | | |
 |---|---|
 | ⌨️ **Keys** | Full 84-key layout, NKRO over USB **and** Bluetooth / 2.4 GHz (on by default), QMK keymaps |
-| 🧩 **Vial** | Built in: remap keys and knobs, macros, combos, tap dance and key overrides live, no reflashing. [Vial Armed](https://github.com/backflipinc/vial-gui-armed) also sets the two-colour effects, light bar, Fn colour and auto-sleep |
+| 🧩 **Vial** | Built in: remap keys and knobs, macros, combos, tap dance and key overrides live, no reflashing. [Vial Armed](https://github.com/backflipinc/vial-gui-armed) also sets the two-colour effects, lighting themes, light bar, Fn colour, auto-sleep and the screen animation |
 | 🎛️ **Knob** | The removable knob works in both spots (Esc or PrtSc): volume, mute, next/prev track on Fn |
-| 🖥️ **Display** | 320×172 HUD: layer, WPM, battery, link status, lock indicators — plus a full settings menu |
+| 🖥️ **Display** | 320×172 HUD: layer, WPM, battery, link status, lock indicators — plus a full settings menu. Or your own picture, GIF or video |
 | 🌈 **RGB** | Per-key RGB with 30+ effects, including 7 custom **two-colour** effects; black is a colour too |
+| 🎨 **Themes** | 4 slots for your own lighting, built in Vial Armed from layers and per-key colours |
 | 🎯 **SnapTap** | The SnapTap switch on the case works: opposing keys A/D and W/S never cancel out — last input wins, or neutral |
 | 🔦 **Fn overlay** | Hold Fn and only the keys bound on the Fn layer light up, in a colour of your choice |
 | 📏 **Light bar** | The 9-LED strip under the screen: WPM meter, battery gauge, link status, scanner, Caps alert |
@@ -39,11 +40,11 @@ Compared with the official firmware v1.32 and its web configurator (`web.io.visi
 | | Stock | This firmware |
 |---|---|---|
 | Settings | web configurator (WebHID, Chromium browsers only) | on-device menu on the LCD — no PC or browser needed; Vial for keymaps; [Vial Armed](https://github.com/backflipinc/vial-gui-armed) desktop app for keymaps and lighting with a live preview |
-| Screen | images / animations, page switching | live HUD: layer, WPM, battery %, voltage, link, lock and SnapTap state; settings menu; screen-off timeout |
+| Screen | images / animations, page switching | live HUD: layer, WPM, battery %, voltage, link, lock and SnapTap state; settings menu; screen-off timeout; or your own animation, uploaded from Vial Armed or `tools/screen.py` |
 | Bluetooth hosts | 3 | 5 |
 | Battery in the OS | Bluetooth / 2.4 GHz | also over USB (Linux: `upower`, desktop widgets) |
 | Keymap power | remap, macros, mod-tap, toggle, key combos | everything QMK has: up to 4 layers live in Vial, tap dance, combos, key overrides, caps word, layer lock, repeat key, auto shift, per-key tapping settings; any QMK feature in code |
-| Lighting | stock effects, per-key colours | 30+ QMK effects, 7 **two-colour** effects, black as a colour, Fn overlay showing only the keys bound on Fn |
+| Lighting | stock effects, per-key colours | 30+ QMK effects, 7 **two-colour** effects, 4 **theme** slots (per-key colours, layers, direction), black as a colour, Fn overlay showing only the keys bound on Fn |
 | Light bar | effect switch | WPM meter, WPM bar, battery gauge, link status, scanner, Caps alert |
 | Auto-sleep | not adjustable in the configurator | 1 / 5 / 10 / 30 min or off, from the keyboard |
 | Recovery | bootloader only through the web configurator | hold Esc while plugging in → bootloader; watchdog drops a hung firmware into the bootloader |
@@ -51,9 +52,7 @@ Compared with the official firmware v1.32 and its web configurator (`web.io.visi
 
 **What stock has and this firmware doesn't (yet)**
 
-- Uploading your own images, GIFs and video to the screen (the stock SPI flash is left untouched).
 - A clock on the screen synced from the PC.
-- Per-key custom colours ("Lighting Edit") and a lighting direction setting.
 - Key response time (debounce) adjustable at runtime.
 - Win / Mac mode switch (Fn+M) and Cmd lock.
 - Configurable SnapTap pairs and the two "key priority" modes — fixed to A/D and W/S, last input or neutral, for now.

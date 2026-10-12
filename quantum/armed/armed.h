@@ -11,7 +11,7 @@
 #define ARMED_PROTOCOL 1
 
 #define ARMED_VERSION_MAJOR 1
-#define ARMED_VERSION_MINOR 2
+#define ARMED_VERSION_MINOR 3
 #define ARMED_VERSION_PATCH 0
 
 enum armed_command {
@@ -25,6 +25,11 @@ enum armed_command {
     ARMED_SCREEN_DATA,
     ARMED_SCREEN_END,
     ARMED_SCREEN_READ,
+    ARMED_THEME_INFO,
+    ARMED_THEME_READ,
+    ARMED_THEME_WRITE,
+    ARMED_THEME_SAVE,
+    ARMED_THEME_REVERT,
 };
 
 enum armed_feature {
@@ -34,6 +39,7 @@ enum armed_feature {
     ARMED_F_STRIP      = 1 << 3,
     ARMED_F_SLEEP      = 1 << 4,
     ARMED_F_SCREEN     = 1 << 5,
+    ARMED_F_THEMES     = 1 << 6,
 };
 
 enum armed_list {
@@ -63,6 +69,7 @@ enum armed_value {
 
 // effect flags in the effect list
 #define ARMED_EFFECT_COLOR2 0x01
+#define ARMED_EFFECT_THEME 0x02
 
 void armed_raw_hid_receive(uint8_t *data, uint8_t length);
 
@@ -98,3 +105,13 @@ bool armed_screen_begin_kb(uint32_t size);
 bool armed_screen_write_kb(const uint8_t *data, uint16_t length);
 bool armed_screen_end_kb(bool commit);
 bool armed_screen_read_kb(uint32_t offset, uint8_t *data, uint16_t length);
+
+// ARMED_THEMES (1..8) in config.h + armed_theme_effects.inc in rgb_matrix_kb.inc, see docs/armed.md
+#define ARMED_THEME_FORMAT 1
+
+void armed_theme_receive(uint8_t *data, uint8_t length);
+int8_t armed_theme_slot(uint8_t mode);
+bool armed_theme_name(uint8_t slot, char *buf, uint8_t length);
+
+bool armed_theme_load_kb(uint8_t slot, uint8_t *data, uint16_t size);
+bool armed_theme_save_kb(uint8_t slot, const uint8_t *data, uint16_t size);

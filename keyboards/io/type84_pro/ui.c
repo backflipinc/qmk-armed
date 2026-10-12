@@ -23,6 +23,9 @@
 #    include "snaptap.h"
 #    include "settings.h"
 #    include "screen.h"
+#    ifdef ARMED_ENABLE
+#        include "armed.h"
+#    endif
 #    include "graphics/tech14.qff.c"
 #    include "graphics/tech20.qff.c"
 #    include "graphics/raj44.qff.c"
@@ -305,11 +308,18 @@ static bool effect_uses_color(uint8_t n) {
         case RGB_MATRIX_RAINBOW_BEACON:
             return false;
         default:
+#    ifdef ARMED_ENABLE
+            if (armed_theme_slot(rgb_matrix_get_mode()) >= 0) return false;
+#    endif
             return n == 1;
     }
 }
 
 static void effect_name(char *buf, uint8_t len) {
+#    ifdef ARMED_ENABLE
+    int8_t slot = armed_theme_slot(rgb_matrix_get_mode());
+    if (slot >= 0 && armed_theme_name(slot, buf, len)) return;
+#    endif
     const char *n = rgb_matrix_get_mode_name(rgb_matrix_get_mode());
     uint8_t     i = 0;
     for (; n[i] && i < len - 1; i++) buf[i] = n[i] == '_' ? ' ' : n[i];

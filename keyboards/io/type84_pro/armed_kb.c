@@ -8,9 +8,29 @@
 #    include "type84_pro.h"
 #    include "strip.h"
 #    include "wireless.h"
+#    include "spiflash.h"
 #    ifdef QUANTUM_PAINTER_ENABLE
 #        include "ui.h"
 #    endif
+
+// Past the stock firmware's write limit (0xFF5000), one sector per slot
+#    define THEME_BASE 0xFFC000UL
+
+bool armed_theme_load_kb(uint8_t slot, uint8_t *data, uint16_t size) {
+    if (slot >= ARMED_THEMES || size > SPIFLASH_SECTOR) return false;
+    spiflash_read(SPIFLASH_USER, THEME_BASE + slot * SPIFLASH_SECTOR, data, size);
+    return true;
+}
+
+// Last page first: a write cut short leaves the header erased, so the slot falls back to defaults
+bool armed_theme_save_kb(uint8_t slot, const uint8_t *data, uint16_t size) {
+    uint32_t addr = THEME_BASE + slot * SPIFLASH_SECTOR;
+    if (slot >= ARMED_THEMES || size > SPIFLASH_SECTOR || !spiflash_erase(SPIFLASH_USER, addr, SPIFLASH_SECTOR)) return false;
+    for (int32_t off = (size - 1) / SPIFLASH_PAGE * SPIFLASH_PAGE; off >= 0; off -= SPIFLASH_PAGE) {
+        if (!spiflash_program(SPIFLASH_USER, addr + off, data + off, MIN(SPIFLASH_PAGE, size - off))) return false;
+    }
+    return true;
+}
 
 uint16_t armed_features_kb(void) {
     uint16_t f = ARMED_F_COLOR2 | ARMED_F_FN_COLOR | ARMED_F_STRIP | ARMED_F_SLEEP;
@@ -50,7 +70,7 @@ bool armed_list_entry_kb(uint8_t list, uint8_t idx, uint8_t *out, uint8_t length
 }
 
 uint8_t armed_effect_flags_kb(uint8_t mode) {
-    return mode >= RGB_MATRIX_CUSTOM_TWO_TONE && mode < RGB_MATRIX_EFFECT_MAX ? ARMED_EFFECT_COLOR2 : 0;
+    return mode >= RGB_MATRIX_CUSTOM_TWO_TONE && mode < RGB_MATRIX_EFFECT_MAX && armed_theme_slot(mode) < 0 ? ARMED_EFFECT_COLOR2 : 0;
 }
 
 bool armed_get_value_kb(uint8_t id, uint8_t *out) {

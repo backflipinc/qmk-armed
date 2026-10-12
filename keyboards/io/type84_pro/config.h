@@ -35,3 +35,6 @@
 
 #define EECONFIG_KB_DATA_SIZE 32
 #define EECONFIG_KB_DATA_VERSION 0x54380001 // bump when kb_settings_t layout changes
+
+// Lighting themes edited in Vial Armed, stored at the end of the user flash chip (armed_kb.c)
+#define ARMED_THEMES 4

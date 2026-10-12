@@ -11,6 +11,9 @@ RGB_MATRIX_EFFECT(STARLIGHT_2)
 RGB_MATRIX_EFFECT(REACTIVE_2)
 RGB_MATRIX_EFFECT(RIPPLE_2)
 #endif
+#ifdef ARMED_ENABLE
+#    include "armed_theme_effects.inc"
+#endif
 
 #ifdef RGB_MATRIX_CUSTOM_EFFECT_IMPLS
 

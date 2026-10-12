@@ -39,6 +39,9 @@ static uint16_t features(void) {
     uint16_t f = armed_features_kb();
 #ifdef RGB_MATRIX_ENABLE
     f |= ARMED_F_RGB_MATRIX;
+#    if defined(ARMED_THEMES) && ARMED_THEMES > 0
+    f |= ARMED_F_THEMES;
+#    endif
 #endif
     return f;
 }
@@ -81,7 +84,7 @@ static bool list_entry(uint8_t *data, uint8_t length) {
 #ifdef RGB_MATRIX_ENABLE
         case ARMED_L_EFFECTS:
             data[4] = idx + 1;
-            data[5] = armed_effect_flags_kb(idx + 1);
+            data[5] = armed_effect_flags_kb(idx + 1) | (armed_theme_slot(idx + 1) >= 0 ? ARMED_EFFECT_THEME : 0);
             armed_put_name(&data[6], length - 6, rgb_matrix_get_mode_name(idx + 1));
             return true;
         case ARMED_L_LEDS:
@@ -189,6 +192,9 @@ void armed_raw_hid_receive(uint8_t *data, uint8_t length) {
             break;
         case ARMED_SCREEN_INFO ... ARMED_SCREEN_READ:
             armed_screen_receive(data, length);
+            return;
+        case ARMED_THEME_INFO ... ARMED_THEME_REVERT:
+            armed_theme_receive(data, length);
             return;
         default:
             ok = false;
