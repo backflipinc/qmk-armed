@@ -168,7 +168,7 @@ come back in order with their sequence numbers. A failed report answers `0xFF` a
 is refused; send SCREEN_END with 0. The new animation becomes visible only after a successful SCREEN_END,
 an aborted upload leaves none.
 
-[Vial Armed](https://github.com/backflipinc/vial-gui-armed) has it under Screen > Settings;
+[Vial Armed](https://github.com/backflipinc/vial-gui-armed) has it under Screen > Animation;
 `keyboards/io/type84_pro/tools/screen.py` is a command line uploader (images, GIFs, video).
 Keyboard side: implement `armed_screen_info_kb()`, `armed_screen_begin_kb()`, `armed_screen_write_kb()`
 (the decoded animation in order), `armed_screen_end_kb()` and `armed_screen_read_kb()`; see
