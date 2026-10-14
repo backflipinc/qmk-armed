@@ -108,6 +108,12 @@ The RGB Matrix, keymap (NKRO, Win lock) and connection settings use QMK's own EE
 settings above. All custom effects from `rgb_matrix_kb.inc` except the theme slots are flagged as two-colour.
 `ARMED_THEMES 4` in `config.h` turns on the lighting themes; they are stored at 0xFFC000 on the user flash chip.
 
+The main screen is the core's widget HUD (`quantum/armed/armed_hud.c`): `ui.c` hands it the display and the three
+fonts, gives the colour roles the UI's colours (the accent included), adds its own sources (link, voltage, charging,
+SnapTap, `FN` as the layer-1 name, the 12H clock) and builds the default layout, which reproduces the fixed HUD of
+the `novial` build. The layout is stored at 0xFFB000 on the user flash chip (`armed_kb.c`). Host values pushed over
+the 2.4 GHz dongle don't reset the auto-sleep timer (`armed_background_request()` in `wireless.c`).
+
 ## Keymaps
 
 | Keymap | Use |

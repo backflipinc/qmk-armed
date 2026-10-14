@@ -38,6 +38,7 @@ void armed_put_name(uint8_t *dst, uint8_t length, const char *name) {
 
 static uint16_t features(void) {
     uint16_t f = armed_features_kb();
+    if (armed_hud_ready()) f |= ARMED_F_HUD;
 #ifdef RGB_MATRIX_ENABLE
     f |= ARMED_F_RGB_MATRIX;
 #    if defined(ARMED_THEMES) && ARMED_THEMES > 0
@@ -228,7 +229,11 @@ static void info(uint8_t *data) {
 #endif
 }
 
-void armed_raw_hid_receive(uint8_t *data, uint8_t length) {
+bool armed_background_request(const uint8_t *data) {
+    return data[0] == ARMED_COMMAND_ID && (data[1] == ARMED_HUD_PUSH || data[1] == ARMED_HUD_TEXT);
+}
+
+bool armed_raw_hid_receive(uint8_t *data, uint8_t length) {
     bool ok = true;
     switch (data[1]) {
         case ARMED_INFO:
@@ -250,10 +255,12 @@ void armed_raw_hid_receive(uint8_t *data, uint8_t length) {
             break;
         case ARMED_SCREEN_INFO ... ARMED_SCREEN_READ:
             armed_screen_receive(data, length);
-            return;
+            return true;
         case ARMED_THEME_INFO ... ARMED_THEME_REVERT:
             armed_theme_receive(data, length);
-            return;
+            return true;
+        case ARMED_HUD_INFO ... ARMED_HUD_TEXT:
+            return armed_hud_receive(data, length);
         case ARMED_CLOCK_GET:
             clock_get(data);
             break;
@@ -265,10 +272,11 @@ void armed_raw_hid_receive(uint8_t *data, uint8_t length) {
             raw_hid_send(data, length);
             wait_ms(100);
             bootloader_jump();
-            return;
+            return false;
         default:
             ok = false;
             break;
     }
     if (!ok) data[0] = id_unhandled;
+    return true;
 }

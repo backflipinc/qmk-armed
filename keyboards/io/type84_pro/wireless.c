@@ -26,6 +26,9 @@
 #include "spiflash.h"
 #include "settings.h"
 #include "raw_hid.h"
+#ifdef ARMED_ENABLE
+#    include "armed.h"
+#endif
 
 #ifdef WL_DEBUG_CONSOLE
 // Vial builds force NO_DEBUG
@@ -753,7 +756,10 @@ void bluetooth_task(void) {
         memcpy(buf, tunnel_rx, sizeof(buf));
         tunnel_pending = false;
         if (mode == WL_MODE_24G) {
-            idle_ref = timer_read32();
+#    ifdef ARMED_ENABLE
+            if (!armed_background_request(buf))
+#    endif
+                idle_ref = timer_read32();
             raw_hid_receive(buf, sizeof(buf));
         }
     }

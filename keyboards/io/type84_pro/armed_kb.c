@@ -15,6 +15,7 @@
 
 // Past the stock firmware's write limit (0xFF5000), one sector per slot
 #    define THEME_BASE 0xFFC000UL
+#    define HUD_BASE 0xFFB000UL
 
 bool armed_theme_load_kb(uint8_t slot, uint8_t *data, uint16_t size) {
     if (slot >= ARMED_THEMES || size > SPIFLASH_SECTOR) return false;
@@ -31,6 +32,23 @@ bool armed_theme_save_kb(uint8_t slot, const uint8_t *data, uint16_t size) {
     }
     return true;
 }
+
+#    ifdef QUANTUM_PAINTER_ENABLE
+bool armed_hud_load_kb(uint8_t *data, uint16_t size) {
+    if (size > SPIFLASH_SECTOR) return false;
+    spiflash_read(SPIFLASH_USER, HUD_BASE, data, size);
+    return true;
+}
+
+// First byte last: a write cut short leaves no magic, so the HUD falls back to the default layout
+bool armed_hud_save_kb(const uint8_t *data, uint16_t size) {
+    if (size > SPIFLASH_SECTOR || !spiflash_erase(SPIFLASH_USER, HUD_BASE, SPIFLASH_SECTOR)) return false;
+    for (int32_t off = (size - 1) / SPIFLASH_PAGE * SPIFLASH_PAGE; off >= 0; off -= SPIFLASH_PAGE) {
+        if (!spiflash_program(SPIFLASH_USER, HUD_BASE + off, data + off, MIN(SPIFLASH_PAGE, size - off))) return false;
+    }
+    return true;
+}
+#    endif
 
 uint16_t armed_features_kb(void) {
     uint16_t f = ARMED_F_COLOR2 | ARMED_F_FN_COLOR | ARMED_F_STRIP | ARMED_F_SLEEP;

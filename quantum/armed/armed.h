@@ -11,7 +11,7 @@
 #define ARMED_PROTOCOL 1
 
 #define ARMED_VERSION_MAJOR 1
-#define ARMED_VERSION_MINOR 5
+#define ARMED_VERSION_MINOR 6
 #define ARMED_VERSION_PATCH 0
 
 enum armed_command {
@@ -33,6 +33,17 @@ enum armed_command {
     ARMED_CLOCK_GET,
     ARMED_CLOCK_SET,
     ARMED_BOOTLOADER,
+    ARMED_HUD_INFO,
+    ARMED_HUD_SOURCE,
+    ARMED_HUD_VALUE,
+    ARMED_HUD_FONT,
+    ARMED_HUD_PALETTE,
+    ARMED_HUD_READ,
+    ARMED_HUD_WRITE,
+    ARMED_HUD_APPLY,
+    ARMED_HUD_REVERT,
+    ARMED_HUD_PUSH,
+    ARMED_HUD_TEXT,
 };
 
 enum armed_feature {
@@ -44,6 +55,7 @@ enum armed_feature {
     ARMED_F_SCREEN     = 1 << 5,
     ARMED_F_THEMES     = 1 << 6,
     ARMED_F_CLOCK      = 1 << 7,
+    ARMED_F_HUD        = 1 << 8,
 };
 
 enum armed_list {
@@ -76,7 +88,10 @@ enum armed_value {
 #define ARMED_EFFECT_COLOR2 0x01
 #define ARMED_EFFECT_THEME 0x02
 
-void armed_raw_hid_receive(uint8_t *data, uint8_t length);
+// false: send no reply (host data pushes)
+bool armed_raw_hid_receive(uint8_t *data, uint8_t length);
+// requests that shouldn't count as user activity (keep a wireless keyboard from sleeping)
+bool armed_background_request(const uint8_t *data);
 
 // copies a name, '_' becomes ' '
 void armed_put_name(uint8_t *dst, uint8_t length, const char *name);
@@ -132,3 +147,123 @@ typedef struct {
 bool armed_clock_now(armed_time_t *t);
 bool armed_clock_get_kb(armed_time_t *t);
 bool armed_clock_set_kb(const armed_time_t *t);
+
+// ARMED_F_HUD: the main screen built from widgets in Vial Armed and fed by the host, see docs/armed.md.
+// Set by the core once the keyboard calls armed_hud_init().
+#define ARMED_HUD_FORMAT 1
+#define ARMED_HUD_MAGIC 0xB7
+#ifndef ARMED_HUD_WIDGETS
+#    define ARMED_HUD_WIDGETS 40
+#endif
+#define ARMED_HUD_STRINGS 512
+#define ARMED_HUD_HOST_VALUES 16
+#define ARMED_HUD_HOST_TEXTS 4
+#define ARMED_HUD_TEXT_LEN 160
+#define ARMED_HUD_GRAPHS 4
+#define ARMED_HUD_GRAPH_POINTS 64
+#define ARMED_HUD_NO_LABEL 0xFFFF
+
+enum armed_hud_widget_type {
+    ARMED_HUD_W_NONE,
+    ARMED_HUD_W_TEXT,      // label with "{}" replaced by the source's value
+    ARMED_HUD_W_BAR,       // param: segments, 0 = solid
+    ARMED_HUD_W_GRAPH,     // param: sample period in 100 ms units
+    ARMED_HUD_W_INDICATOR, // tile with a dot and the label, lit when the source is non-zero
+    ARMED_HUD_W_BATTERY,   // battery icon
+    ARMED_HUD_W_FRAME,     // param: armed_hud_frame
+    ARMED_HUD_W_TEXTBOX,   // the source's text wrapped over several lines
+};
+
+enum armed_hud_frame { ARMED_HUD_FRAME_BRACKETS, ARMED_HUD_FRAME_BOX, ARMED_HUD_FRAME_HLINE, ARMED_HUD_FRAME_VLINE, ARMED_HUD_FRAME_PANEL };
+
+// Colour roles, the keyboard's palette (armed_hud_color_kb) gives them colours
+enum armed_hud_color {
+    ARMED_HUD_C_BG,
+    ARMED_HUD_C_PANEL,
+    ARMED_HUD_C_LINE,
+    ARMED_HUD_C_DIM,
+    ARMED_HUD_C_TEXT,
+    ARMED_HUD_C_ACCENT,
+    ARMED_HUD_C_OK,
+    ARMED_HUD_C_WARN,
+    ARMED_HUD_C_COUNT,
+    ARMED_HUD_C_AUTO = 0x0F, // the colour the source suggests
+};
+
+#define ARMED_HUD_F_ALIGN 0x03 // 0 left, 1 centre, 2 right
+#define ARMED_HUD_F_WARN 0x04  // WARN colour once the value reaches `warn`
+#define ARMED_HUD_F_WARN_BELOW 0x08
+#define ARMED_HUD_F_FILL 0x10 // graph: columns instead of a line
+#define ARMED_HUD_F_TAIL 0x20 // text box: show the last lines
+#define ARMED_HUD_F_DOT 0x40  // indicator: the dot only
+
+enum armed_hud_source {
+    ARMED_HUD_S_NONE,
+    ARMED_HUD_S_LAYER,
+    ARMED_HUD_S_WPM,
+    ARMED_HUD_S_BATTERY,
+    ARMED_HUD_S_VOLTAGE,
+    ARMED_HUD_S_CHARGING,
+    ARMED_HUD_S_LINK,
+    ARMED_HUD_S_MODE,
+    ARMED_HUD_S_TIME,
+    ARMED_HUD_S_DATE,
+    ARMED_HUD_S_CAPS,
+    ARMED_HUD_S_NUM,
+    ARMED_HUD_S_SCROLL,
+    ARMED_HUD_S_NKRO,
+    ARMED_HUD_S_LIGHT,
+    ARMED_HUD_S_GUI_LOCK,
+    ARMED_HUD_S_SNAPTAP,
+    ARMED_HUD_S_EFFECT,
+    ARMED_HUD_S_UPTIME,
+    ARMED_HUD_S_BRIGHTNESS,
+    ARMED_HUD_S_COUNT,
+    ARMED_HUD_S_HOST     = 0x40, // + slot, numbers pushed by the host
+    ARMED_HUD_S_HOST_TXT = 0x60, // + slot, text pushed by the host
+};
+
+enum armed_hud_kind { ARMED_HUD_K_TEXT, ARMED_HUD_K_NUMBER, ARMED_HUD_K_FLAG, ARMED_HUD_K_LINES };
+
+typedef struct __attribute__((packed)) {
+    uint8_t  type, source, font, fg, bg, flags;
+    int16_t  x, y, w, h;
+    int16_t  lo, hi, warn; // in the source's units before the decimal point is placed
+    uint8_t  param, reserved;
+    uint16_t label; // offset in strings, ARMED_HUD_NO_LABEL = none
+} armed_hud_widget_t;
+
+typedef struct __attribute__((packed)) {
+    uint8_t            magic, format, count, reserved;
+    armed_hud_widget_t widget[ARMED_HUD_WIDGETS];
+    char               strings[ARMED_HUD_STRINGS];
+} armed_hud_layout_t;
+
+typedef struct {
+    int32_t num; // value * 10^dec
+    uint8_t dec;
+    uint8_t hint; // suggested colour role
+    bool    valid;
+    char    text[24]; // text sources; numbers leave it empty
+} armed_hud_value_t;
+
+typedef struct {
+    const void    *handle; // painter_font_handle_t
+    const uint8_t *data;   // the QFF, read by Vial Armed for its preview
+    uint32_t       size;
+} armed_hud_font_t;
+
+// device: painter_device_t; fonts must stay valid
+void armed_hud_init(const void *device, const armed_hud_font_t *fonts, uint8_t count);
+// draws the main screen, only what changed unless `all`
+void armed_hud_draw(bool all);
+bool armed_hud_ready(void);
+bool armed_hud_receive(uint8_t *data, uint8_t length); // false: no reply
+// for armed_hud_defaults_kb(): appends a widget, NULL when full
+armed_hud_widget_t *armed_hud_add(uint8_t type, uint8_t source, uint8_t font, uint8_t fg, uint8_t bg, uint8_t flags, int16_t x, int16_t y, int16_t w, int16_t h, uint8_t param, const char *label);
+
+void armed_hud_defaults_kb(void);
+bool armed_hud_source_kb(uint8_t source, armed_hud_value_t *value); // keyboard's own sources, or override the core's
+void armed_hud_color_kb(uint8_t role, uint8_t *hsv);
+bool armed_hud_load_kb(uint8_t *data, uint16_t size);
+bool armed_hud_save_kb(const uint8_t *data, uint16_t size);

@@ -32,6 +32,7 @@ Anything beyond RGB Matrix is a feature the keyboard declares and implements thr
 | `ARMED_F_SCREEN` | — | what the main screen shows; plus the screen animation upload below |
 | `ARMED_F_THEMES` (set by the core) | — | lighting themes, see below |
 | `ARMED_F_CLOCK` | — | clock format; plus the clock commands below |
+| `ARMED_F_HUD` (set by the core) | — | the main screen built from widgets and fed by the host, see [HUD](#hud) |
 
 ```c
 #include "armed.h"
@@ -100,6 +101,17 @@ A request the firmware can't serve comes back with `0xFF` (`id_unhandled`) in th
 | `15` CLOCK_GET | — | `[2]` 1 = the time is set, `[3..6]` local time (LE) |
 | `16` CLOCK_SET | `[2..5]` local time (LE) | stored |
 | `17` BOOTLOADER | — | echoed, then the keyboard reboots into its bootloader (no Vial unlock needed) |
+| `18` HUD_INFO | — | `[2]` format (1), `[3]` max widgets, `[4]` widget size, `[5..6]` layout size, `[7..8]` label bytes, `[9]` host numbers, `[10]` host texts, `[11]` host text size, `[12]` fonts, `[13]` colour roles, `[14]` sources, `[15..16]` width, `[17..18]` height, `[19]` max graphs, `[20]` graph samples |
+| `19` HUD_SOURCE | `[2]` index (< sources) | `[3]` source id, `[4]` kind: 0 text, 1 number, 2 on / off, 3 multi-line text, `[5]` decimals (`0xFF`: set by the host), `[6..]` name |
+| `20` HUD_VALUE | `[2]` source id | `[3]` valid, `[4]` suggested colour role, `[5]` decimals, `[6..9]` number (LE, signed), `[10..]` text |
+| `21` HUD_FONT | `[2]` font, `[3..6]` offset, `[7]` length (≤ 24) | `[8..]` bytes of the font (QFF), for a preview drawn with the keyboard's own fonts |
+| `22` HUD_PALETTE | `[2]` colour role | `[3..5]` H, S, V as the keyboard draws it now (the accent can change) |
+| `23` HUD_READ | `[2..3]` offset, `[4]` length (≤ 27) | `[5..]` bytes of the layout the keyboard shows |
+| `24` HUD_WRITE | `[2..3]` offset, `[4]` length (≤ 27), `[5..]` bytes | written; the HUD stops drawing until APPLY (3 s at most) |
+| `25` HUD_APPLY | `[2]` 1 = also store | checked and shown; a bad layout answers `0xFF` and the stored one comes back |
+| `26` HUD_REVERT | `[2]` 0 = the stored layout, 1 = the built-in default | shown, not stored |
+| `27` HUD_PUSH | `[2]` seconds the values stay valid (0 = until replaced), `[3]` count (≤ 4), then per value `slot`, `decimals`, number (4 bytes LE, signed) | **no reply** |
+| `28` HUD_TEXT | `[2]` slot, `[3]` seconds valid, `[4]` offset, `[5]` length (≤ 25), `[6]` 1 = last piece, `[7..]` ASCII | **no reply**; pieces in order, starting at offset 0 |
 
 Lists:
 
@@ -209,3 +221,87 @@ Each layer gives every LED it covers a colour and a coverage, then blends it ove
 
 `armed_theme.c` is the reference; Vial Armed's `theme_render.py` draws the same frames bit for bit (sparkle aside,
 it is random).
+
+## HUD
+
+A keyboard with a Quantum Painter screen can let the host lay out its main screen: a list of up to 40 widgets
+drawn in order, in the keyboard's own fonts and colours. [Vial Armed](https://github.com/backflipinc/vial-gui-armed)
+has a HUD page with a pixel-exact preview (it reads the fonts with HUD_FONT and redraws what `armed_hud.c` draws)
+and an agent that feeds the screen with the computer's metrics and the output of commands.
+
+Keyboard side: call `armed_hud_init(device, fonts, count)` once the display is up and `armed_hud_draw(all)` where the
+main screen is drawn; `all` means the whole screen, otherwise only widgets whose content changed are redrawn.
+Optional hooks: `armed_hud_defaults_kb()` builds the default layout with `armed_hud_add()`,
+`armed_hud_color_kb()` gives the colour roles their colours, `armed_hud_source_kb()` adds or overrides sources,
+`armed_hud_load_kb()` / `armed_hud_save_kb()` store the layout (one blob, 1476 bytes with the default sizes).
+See `keyboards/io/type84_pro/ui.c` and `armed_kb.c`.
+
+### Colours
+
+Widgets name colour **roles**, not colours, so a layout keeps the keyboard's look and follows its accent setting:
+`0` BG, `1` PANEL, `2` LINE, `3` DIM, `4` TEXT, `5` ACCENT, `6` OK, `7` WARN; `0x0F` AUTO takes the colour the
+source suggests (accent on a layer above the base, OK while charging, the link state's colour, ...).
+
+### Sources
+
+| Id | Source | Kind |
+|---|---|---|
+| `1` | layer: `BASE`, `L1`, ... (the keyboard may name them) | text |
+| `2` | WPM | number |
+| `3` | battery, % | number |
+| `4` | battery voltage | number |
+| `5` | charging | on / off |
+| `6` | link status, e.g. `BT1 LINKED` | text, number 1 when connected |
+| `7` | link mode: `USB`, `BT1`, `2.4G` | text |
+| `8`, `9` | time, date (needs `ARMED_F_CLOCK`) | text |
+| `10`–`16` | Caps / Num / Scroll Lock, NKRO, lighting on, GUI lock, SnapTap | on / off |
+| `17` | lighting effect or theme name | text |
+| `18` | uptime | text |
+| `19` | lighting brightness, % | number |
+| `0x40`–`0x4F` | host numbers 1–16 (HUD_PUSH) | number |
+| `0x60`–`0x63` | host texts 1–4, up to 159 characters (HUD_TEXT) | multi-line text |
+
+Only the sources the keyboard has are listed by HUD_SOURCE. Numbers carry their decimal places: 425 with 1 decimal
+is 42.5. Host values go stale after the seconds sent with them and show as `--`; the agent resends every second.
+The fonts are ASCII: other bytes show as `?`. HUD_PUSH and HUD_TEXT get no reply, so an agent can feed the screen
+while another program talks to the keyboard, and they don't count as activity: a wireless keyboard still falls
+asleep.
+
+### Layout
+
+| Offset | Size | |
+|---|---|---|
+| 0 | 1 | magic `0xB7` |
+| 1 | 1 | format, `1` |
+| 2 | 1 | widgets used |
+| 3 | 1 | 0 |
+| 4 | 40 × 24 | widgets |
+| 964 | 512 | labels: zero-terminated ASCII strings |
+
+Widget, integers little-endian:
+
+| Byte | |
+|---|---|
+| 0 | type: 1 text, 2 bar, 3 graph, 4 indicator, 5 battery icon, 6 frame, 7 text box |
+| 1 | source |
+| 2 | font index |
+| 3, 4 | colour role of the foreground, of the background |
+| 5 | flags: `0x03` align (0 left, 1 centre, 2 right), `0x04` WARN colour at `warn`, `0x08` ... or below it, `0x10` graph filled, `0x20` text box shows the last lines, `0x40` indicator is a dot only |
+| 6..13 | x, y, width, height (signed 16-bit); width 0 = to the screen's edge, height 0 = one line of the font |
+| 14..19 | `lo`, `hi`, `warn` (signed 16-bit) in the source's units before the decimal point: 425 = 42.5 |
+| 20 | param, per type |
+| 21 | 0 |
+| 22..23 | offset of the label, `0xFFFF` = none |
+
+| Type | Draws | Param |
+|---|---|---|
+| text | the label with the first `{}` replaced by the value; no label = the value, no source = a fixed label | digits: pad numbers with zeros |
+| bar | an outlined bar filled between `lo` and `hi` (`hi ≤ lo`: 0–100 %) | segments, 0 = solid |
+| graph | the last samples (newest on the right), a line or filled columns | sample period in 100 ms (0 = 1 s) |
+| indicator | a tile with a dot and the label (or the source's name), lit while the source is non-zero | — |
+| battery icon | the keyboard's battery icon, 25 × 11 px | — |
+| frame | 0 corner brackets (`lo` = corner length, 0 = 6), 1 box, 2 horizontal line, 3 vertical line, 4 filled panel | style |
+| text box | the source's text wrapped between words at the width | extra pixels between lines |
+
+Text is cut to the widget's width. A widget that changes is cleared to its background and redrawn, and the lines and
+frames under it (not panels) are redrawn too; overlapping changing widgets are the layout's problem. At most 4 graphs keep history.

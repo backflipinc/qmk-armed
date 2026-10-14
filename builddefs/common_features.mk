@@ -666,6 +666,7 @@ ifeq ($(strip $(ARMED_ENABLE)), yes)
     SRC += $(QUANTUM_DIR)/armed/armed.c
     SRC += $(QUANTUM_DIR)/armed/armed_screen.c
     SRC += $(QUANTUM_DIR)/armed/armed_theme.c
+    SRC += $(QUANTUM_DIR)/armed/armed_hud.c
 endif
 
 ifeq ($(strip $(HID_BATTERY_ENABLE)), yes)

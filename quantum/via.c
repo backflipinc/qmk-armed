@@ -236,7 +236,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
     switch (*command_id) {
 #ifdef ARMED_ENABLE
         case ARMED_COMMAND_ID: {
-            armed_raw_hid_receive(data, length);
+            if (!armed_raw_hid_receive(data, length)) return;
             break;
         }
 #endif

@@ -641,30 +641,6 @@ void ui_toast(const char *msg) {
  * Главный экран
  * ------------------------------------------------------------------------ */
 
-static struct {
-    uint8_t bat;
-    bool    chg;
-    uint8_t layer;
-    uint8_t wpm;
-    uint16_t mv;
-    uint8_t tiles;
-    char    status[24];
-    col_t   status_c;
-    char    time[8];
-    char    date[12];
-} hud;
-
-static void battery_icon(int x, int y, uint8_t pct, bool chg) {
-    rect(x, y, x + 22, y + 10, C_TXT, false);
-    rect(x + 23, y + 3, x + 24, y + 7, C_TXT, true);
-    uint8_t n = (pct + 10) / 20;
-    for (uint8_t i = 0; i < 5; i++) {
-        col_t c = C_LINE;
-        if (i < n) c = chg ? C_OK : (pct > 15 ? C_ACC : C_WARN);
-        rect(x + 2 + i * 4, y + 2, x + 4 + i * 4, y + 8, c, true);
-    }
-}
-
 static void link_info(char *label, bool *ok, char *status, col_t *sc) {
     wl_link_t l = wireless_link();
     switch (wireless_mode()) {
@@ -694,31 +670,150 @@ static void link_info(char *label, bool *ok, char *status, col_t *sc) {
     }
 }
 
+
 #    ifdef ARMED_ENABLE
-static void clock_draw(void) {
-    static const char *const days[]   = {"MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"};
-    static const char *const months[] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
-    char         t[8], d[12];
-    armed_time_t now;
-    bool         ok = armed_clock_now(&now);
-    if (!ok) {
-        strcpy(t, "--:--");
-        strcpy(d, "NO SYNC");
-    } else if (clock_fmt == 1) {
-        snprintf(t, sizeof(t), "%u:%02u", now.hour % 12 ? now.hour % 12 : 12, now.minute);
-        snprintf(d, sizeof(d), "%s %s %u", now.hour < 12 ? "AM" : "PM", days[now.weekday], now.day);
-    } else {
-        snprintf(t, sizeof(t), "%02u:%02u", now.hour, now.minute);
-        snprintf(d, sizeof(d), "%s %u %s", days[now.weekday], now.day, months[now.month - 1]);
+
+// Главный экран собирается из виджетов (quantum/armed/armed_hud.c), макет правится в Vial Armed
+
+static armed_hud_font_t hud_fonts[3];
+
+enum { HF14, HF20, HF44 };
+
+void armed_hud_defaults_kb(void) {
+    static const struct {
+        uint8_t     source;
+        const char *name;
+    } tiles[] = {{ARMED_HUD_S_CAPS, "CAPS"}, {ARMED_HUD_S_NKRO, "NKRO"}, {ARMED_HUD_S_LIGHT, "LIGHT"}, {ARMED_HUD_S_GUI_LOCK, "WIN LK"}, {ARMED_HUD_S_SNAPTAP, "SNAPTAP"}};
+    armed_hud_add(ARMED_HUD_W_TEXT, ARMED_HUD_S_NONE, HF14, ARMED_HUD_C_ACCENT, ARMED_HUD_C_BG, 0, 8, 3, 50, 0, 0, "IO//84");
+    armed_hud_add(ARMED_HUD_W_TEXT, ARMED_HUD_S_NONE, HF14, ARMED_HUD_C_DIM, ARMED_HUD_C_BG, 0, 62, 3, 60, 0, 0, "QMK");
+    armed_hud_add(ARMED_HUD_W_TEXT, ARMED_HUD_S_BATTERY, HF14, ARMED_HUD_C_AUTO, ARMED_HUD_C_BG, 2, 200, 3, 66, 0, 0, "{}%");
+    armed_hud_add(ARMED_HUD_W_BATTERY, ARMED_HUD_S_BATTERY, HF14, ARMED_HUD_C_ACCENT, ARMED_HUD_C_BG, 0, 272, 5, 25, 11, 0, NULL);
+    armed_hud_add(ARMED_HUD_W_FRAME, ARMED_HUD_S_NONE, HF14, ARMED_HUD_C_LINE, ARMED_HUD_C_BG, 0, 0, HEADER_LINE_Y, W, 1, ARMED_HUD_FRAME_HLINE, NULL);
+    armed_hud_add(ARMED_HUD_W_FRAME, ARMED_HUD_S_NONE, HF14, ARMED_HUD_C_LINE, ARMED_HUD_C_BG, 0, 0, FOOTER_LINE_Y, W, 1, ARMED_HUD_FRAME_HLINE, NULL);
+    armed_hud_add(ARMED_HUD_W_FRAME, ARMED_HUD_S_NONE, HF14, ARMED_HUD_C_DIM, ARMED_HUD_C_BG, 0, 6, 28, 201, 115, ARMED_HUD_FRAME_BRACKETS, NULL);
+    armed_hud_add(ARMED_HUD_W_TEXT, ARMED_HUD_S_NONE, HF14, ARMED_HUD_C_DIM, ARMED_HUD_C_BG, 0, 16, 32, 60, 0, 0, "LAYER");
+    armed_hud_add(ARMED_HUD_W_TEXT, ARMED_HUD_S_NONE, HF14, ARMED_HUD_C_DIM, ARMED_HUD_C_BG, 0, 16, 92, 34, 0, 0, "WPM");
+    armed_hud_add(ARMED_HUD_W_TEXT, ARMED_HUD_S_NONE, HF14, ARMED_HUD_C_DIM, ARMED_HUD_C_BG, 0, 110, 92, 34, 0, 0, "BAT");
+    armed_hud_add(ARMED_HUD_W_TEXT, ARMED_HUD_S_NONE, HF14, ARMED_HUD_C_DIM, ARMED_HUD_C_BG, 0, 16, 118, 34, 0, 0, "TIME");
+    armed_hud_add(ARMED_HUD_W_TEXT, ARMED_HUD_S_LAYER, HF44, ARMED_HUD_C_AUTO, ARMED_HUD_C_BG, 0, 14, 46, 187, 42, 0, NULL);
+    armed_hud_add(ARMED_HUD_W_TEXT, ARMED_HUD_S_WPM, HF20, ARMED_HUD_C_ACCENT, ARMED_HUD_C_BG, 0, 52, 88, 54, 20, 3, NULL);
+    armed_hud_add(ARMED_HUD_W_TEXT, ARMED_HUD_S_VOLTAGE, HF20, ARMED_HUD_C_TEXT, ARMED_HUD_C_BG, 0, 146, 88, 59, 21, 0, "{}V");
+    armed_hud_add(ARMED_HUD_W_TEXT, ARMED_HUD_S_TIME, HF20, ARMED_HUD_C_AUTO, ARMED_HUD_C_BG, 0, 52, 114, 64, 22, 0, NULL);
+    armed_hud_add(ARMED_HUD_W_TEXT, ARMED_HUD_S_DATE, HF14, ARMED_HUD_C_DIM, ARMED_HUD_C_BG, 0, 118, 118, 87, 18, 0, NULL);
+    for (uint8_t i = 0; i < ARRAY_SIZE(tiles); i++) {
+        armed_hud_add(ARMED_HUD_W_INDICATOR, tiles[i].source, HF14, ARMED_HUD_C_ACCENT, ARMED_HUD_C_BG, 0, 214, 28 + i * 23, 99, 20, 0, tiles[i].name);
     }
-    if (!strcmp(t, hud.time) && !strcmp(d, hud.date)) return;
-    rect(52, 114, 204, 136, C_BG, true);
-    text(52, 114, f20, t, ok ? C_TXT : C_LINE, C_BG);
-    text(118, 118, f14, d, C_DIM, C_BG);
-    strcpy(hud.time, t);
-    strcpy(hud.date, d);
+    armed_hud_add(ARMED_HUD_W_INDICATOR, ARMED_HUD_S_LINK, HF14, ARMED_HUD_C_AUTO, ARMED_HUD_C_BG, ARMED_HUD_F_DOT, 8, 158, 6, 6, 0, NULL);
+    armed_hud_add(ARMED_HUD_W_TEXT, ARMED_HUD_S_LINK, HF14, ARMED_HUD_C_TEXT, ARMED_HUD_C_BG, 0, 20, 154, 181, 17, 0, NULL);
+    armed_hud_add(ARMED_HUD_W_TEXT, ARMED_HUD_S_NONE, HF14, ARMED_HUD_C_DIM, ARMED_HUD_C_BG, 2, 150, 154, 162, 0, 0, "FN+ENT  MENU");
 }
-#    endif
+
+void armed_hud_color_kb(uint8_t role, uint8_t *hsv) {
+    static const col_t *const roles[ARMED_HUD_C_COUNT] = {&C_BG, &C_PANEL, &C_LINE, &C_DIM, &C_TXT, &C_ACC, &C_OK, &C_WARN};
+    const col_t              *c                        = roles[role];
+    hsv[0]                                             = c->h;
+    hsv[1]                                             = c->s;
+    hsv[2]                                             = c->v;
+}
+
+static uint8_t col_role(col_t c) {
+    return c.h == C_OK.h && c.s == C_OK.s ? ARMED_HUD_C_OK : c.h == C_WARN.h && c.s == C_WARN.s ? ARMED_HUD_C_WARN : c.v == C_DIM.v ? ARMED_HUD_C_DIM : ARMED_HUD_C_ACCENT;
+}
+
+bool armed_hud_source_kb(uint8_t s, armed_hud_value_t *v) {
+    switch (s) {
+        case ARMED_HUD_S_LAYER: {
+            uint8_t l = get_highest_layer(layer_state | default_layer_state);
+            v->num    = l;
+            v->hint   = l ? ARMED_HUD_C_ACCENT : ARMED_HUD_C_TEXT;
+            if (l > 1) {
+                snprintf(v->text, sizeof(v->text), "L%u", l);
+            } else {
+                strcpy(v->text, l ? "FN" : "BASE");
+            }
+            return true;
+        }
+        case ARMED_HUD_S_BATTERY:
+            v->num  = battery_get_percent();
+            v->hint = battery_charging() ? ARMED_HUD_C_OK : ARMED_HUD_C_TEXT;
+            return true;
+        case ARMED_HUD_S_VOLTAGE:
+            v->num = battery_millivolts() / 10;
+            v->dec = 2;
+            return true;
+        case ARMED_HUD_S_CHARGING:
+            v->num  = battery_charging();
+            v->hint = v->num ? ARMED_HUD_C_OK : ARMED_HUD_C_LINE;
+            strcpy(v->text, v->num ? "ON" : "OFF");
+            return true;
+        case ARMED_HUD_S_LINK:
+        case ARMED_HUD_S_MODE: {
+            char  label[6];
+            bool  ok = false;
+            col_t sc = C_DIM;
+            link_info(label, &ok, v->text, &sc);
+            if (s == ARMED_HUD_S_MODE) memcpy(v->text, label, sizeof(label));
+            v->num  = ok;
+            v->hint = col_role(sc);
+            return true;
+        }
+        case ARMED_HUD_S_SNAPTAP:
+            v->num  = snaptap_active();
+            v->hint = v->num ? ARMED_HUD_C_ACCENT : ARMED_HUD_C_LINE;
+            strcpy(v->text, v->num ? "ON" : "OFF");
+            return true;
+        case ARMED_HUD_S_EFFECT:
+            effect_name(v->text, sizeof(v->text));
+            return true;
+        case ARMED_HUD_S_TIME:
+        case ARMED_HUD_S_DATE: {
+            static const char *const days[] = {"MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"};
+            armed_time_t             now;
+            if (clock_fmt == 2) {
+                v->valid = false;
+                strcpy(v->text, " ");
+                return true;
+            }
+            if (clock_fmt != 1 || !armed_clock_now(&now)) return false; // 24H: the core's format
+            if (s == ARMED_HUD_S_TIME) {
+                v->num = now.hour * 60 + now.minute;
+                snprintf(v->text, sizeof(v->text), "%u:%02u", now.hour % 12 ? now.hour % 12 : 12, now.minute);
+            } else {
+                snprintf(v->text, sizeof(v->text), "%s %s %u", now.hour < 12 ? "AM" : "PM", days[now.weekday], now.day);
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+static void main_draw(bool all) {
+    armed_hud_draw(all);
+}
+
+#    else
+
+static struct {
+    uint8_t bat;
+    bool    chg;
+    uint8_t layer;
+    uint8_t wpm;
+    uint16_t mv;
+    uint8_t tiles;
+    char    status[24];
+    col_t   status_c;
+} hud;
+
+static void battery_icon(int x, int y, uint8_t pct, bool chg) {
+    rect(x, y, x + 22, y + 10, C_TXT, false);
+    rect(x + 23, y + 3, x + 24, y + 7, C_TXT, true);
+    uint8_t n = (pct + 10) / 20;
+    for (uint8_t i = 0; i < 5; i++) {
+        col_t c = C_LINE;
+        if (i < n) c = chg ? C_OK : (pct > 15 ? C_ACC : C_WARN);
+        rect(x + 2 + i * 4, y + 2, x + 4 + i * 4, y + 8, c, true);
+    }
+}
 
 static void main_draw(bool all) {
     char  link[6], status[24];
@@ -742,8 +837,6 @@ static void main_draw(bool all) {
         text(16, 32, f14, "LAYER", C_DIM, C_BG);
         text(16, 92, f14, "WPM", C_DIM, C_BG);
         text(110, 92, f14, "BAT", C_DIM, C_BG);
-        if (clock_fmt != 2) text(16, 118, f14, "TIME", C_DIM, C_BG);
-        hud.time[0] = 0;
         text_r(W - 8, 154, f14, "FN+ENT  MENU", C_DIM, C_BG);
     }
 
@@ -783,14 +876,6 @@ static void main_draw(bool all) {
         hud.mv = mv;
     }
 
-#    ifdef ARMED_ENABLE
-    static uint16_t clock_at;
-    if (clock_fmt != 2 && (all || timer_elapsed(clock_at) > 500)) {
-        clock_at = timer_read();
-        clock_draw();
-    }
-#    endif
-
     // плашки состояний
     if (all || tiles != hud.tiles) {
         static const char *names[] = {"CAPS", "NKRO", "LIGHT", "WIN LK", "SNAPTAP"};
@@ -814,6 +899,8 @@ static void main_draw(bool all) {
         hud.status_c = sc;
     }
 }
+
+#    endif
 
 /* --------------------------------------------------------------------------
  * Анимация пользователя и её загрузка
@@ -1215,6 +1302,12 @@ void ui_init(painter_device_t dev) {
     f20 = qp_load_font_mem(font_tech20);
     f44 = qp_load_font_mem(font_raj44);
     settings_load();
+#    ifdef ARMED_ENABLE
+    hud_fonts[HF14] = (armed_hud_font_t){f14, font_tech14, font_tech14_length};
+    hud_fonts[HF20] = (armed_hud_font_t){f20, font_tech20, font_tech20_length};
+    hud_fonts[HF44] = (armed_hud_font_t){f44, font_raj44, font_raj44_length};
+    armed_hud_init(lcd, hud_fonts, ARRAY_SIZE(hud_fonts));
+#    endif
     full_redraw = true;
     ui_task();
 }
