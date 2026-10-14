@@ -36,7 +36,7 @@ and the next frame is preceded by a wake-up `A6 00 A6`.
 | `A6` | `55` | going to sleep (Bluetooth) |
 | `A6` | `00` | wake-up poke |
 | `A6` | `52`, `53` | ⚠️ unknown |
-| `A7` | 0–100 | battery level, % — the module reports it to the host |
+| `A7` | 0–100 | battery level, % — the module reports it to the host over Bluetooth; the 2.4 GHz dongle doesn't expose it |
 | `A8` | 5 bytes: buttons, X, Y, wheel, … | mouse ⚠️ (not used) |
 | `A9` | `n` + name | Bluetooth device name ⚠️ (not used; the module keeps its own) |
 | `AB` | `A6 FF 01` | sent after waking up in 2.4 GHz mode |

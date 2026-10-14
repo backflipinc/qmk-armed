@@ -27,7 +27,7 @@ reporting and auto-sleep all keep working. See [how it compares with the stock f
 | 🔦 **Fn overlay** | Hold Fn and only the keys bound on the Fn layer light up, in a colour of your choice — unless the current theme has its own Fn layers |
 | 📏 **Light bar** | The 9-LED strip under the screen: WPM meter, battery gauge, link status, scanner, Caps alert |
 | 📡 **Wireless** | Bluetooth (5 host slots) and 2.4 GHz dongle via the built-in radio module, pairing from the keyboard; Vial / Vial Armed work through the dongle too |
-| 🔋 **Battery** | Charge level on screen and in the OS — over Bluetooth, the 2.4 GHz dongle **and** USB (Linux) |
+| 🔋 **Battery** | Charge level on screen and in the OS — over Bluetooth **and** USB (Linux); not over the 2.4 GHz dongle |
 | 💤 **Power** | Configurable auto-sleep in wireless modes (deep sleep, any key/knob/switch wakes it) |
 | 🛟 **Safety nets** | Hold Esc while plugging in → bootloader; a watchdog drops a hung firmware into the bootloader |
 
@@ -42,7 +42,7 @@ Compared with the official firmware v1.32 and its web configurator (`web.io.visi
 | Settings | web configurator (WebHID, Chromium browsers only) | on-device menu on the LCD — no PC or browser needed; Vial for keymaps; [Vial Armed](https://github.com/backflipinc/vial-gui-armed) desktop app for keymaps and lighting with a live preview |
 | Screen | images / animations, page switching | live HUD: layer, WPM, battery %, voltage, clock, link, lock and SnapTap state; settings menu; screen-off timeout; or your own animation, uploaded from Vial Armed or `tools/screen.py` |
 | Bluetooth hosts | 3 | 5 |
-| Battery in the OS | Bluetooth / 2.4 GHz | also over USB (Linux: `upower`, desktop widgets) |
+| Battery in the OS | Bluetooth | also over USB (Linux: `upower`, desktop widgets) |
 | Keymap power | remap, macros, mod-tap, toggle, key combos | everything QMK has: up to 4 layers live in Vial, tap dance, combos, key overrides, caps word, layer lock, repeat key, auto shift, per-key tapping settings; any QMK feature in code |
 | Lighting | stock effects, per-key colours | 30+ QMK effects, 7 **two-colour** effects, 4 **theme** slots (per-key colours, layers, direction), black as a colour, Fn overlay showing only the keys bound on Fn |
 | Light bar | effect switch | WPM meter, WPM bar, battery gauge, link status, scanner, Caps alert |
@@ -153,7 +153,9 @@ regular Vial keeps working as before.
 
 ### Battery in your OS
 
-- **Bluetooth / 2.4 GHz:** shown by the OS like any wireless keyboard.
+- **Bluetooth:** shown by the OS like any wireless keyboard.
+- **2.4 GHz:** not shown, on stock firmware either: the dongle doesn't pass the charge level to the host.
+  Check it on the keyboard's screen or light bar.
 - **USB (Linux):** the firmware exposes a standard HID battery, so `upower` and desktop
   battery widgets list the keyboard with its charge and charging state.
 
@@ -172,6 +174,7 @@ regular Vial keeps working as before.
 - The clock is set by Vial Armed when it connects (the RTC chip keeps it through sleep and unplugging); other host data on the screen (CPU load, …) is not implemented yet.
 - The SPI flash with the stock screen animations is not used.
 - Vial works over USB and the 2.4 GHz dongle, not over Bluetooth (the radio module has no channel for it).
+- The OS sees the battery over Bluetooth and USB, not over the 2.4 GHz dongle (stock has the same limit).
   Screen animations are transferred over USB only (megabytes at ~20 ms per 28-byte packet).
 - System power keys and mouse keys are not sent over the air (format unverified).
 - The USB battery report narrows QMK's *System Control* report to power / sleep / wake, so
