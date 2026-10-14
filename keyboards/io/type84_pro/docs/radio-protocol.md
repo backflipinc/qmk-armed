@@ -40,7 +40,7 @@ and the next frame is preceded by a wake-up `A6 00 A6`.
 | `A8` | 5 bytes: buttons, X, Y, wheel, … | mouse ⚠️ (not used) |
 | `A9` | `n` + name | Bluetooth device name ⚠️ (not used; the module keeps its own) |
 | `AB` | `A6 FF 01` | sent after waking up in 2.4 GHz mode |
-| `91` | 32 bytes | configurator tunnel reply over the dongle ⚠️ (not used) |
+| `91` | 32 bytes | raw HID reply through the dongle (Vial / VIA / qmk-armed); the module never ACKs it — send once |
 
 ## Module → MCU
 
@@ -57,7 +57,7 @@ Three-byte frames (several may arrive back to back), plus one 34-byte frame type
 | `5B 23 SS` | sent at module start-up (ignored) |
 | `5B 42 9D` | ping, reply with ACK |
 | `5C vv SS` | ⚠️ accepted, no action in the stock firmware |
-| `81` + 32 bytes + SUM | configurator tunnel over the dongle (2.4 GHz only) ⚠️ |
+| `81` + 32 bytes + SUM | raw HID request through the dongle (2.4 GHz only), see below |
 
 ## Sequences
 
@@ -68,3 +68,19 @@ Three-byte frames (several may arrive back to back), plus one 34-byte frame type
 | Pair the dongle | `A6 30`, then `A6 51` |
 | Report battery | `A7 57` (87 %) — resend after each (re)connect, the module drops it while unlinked |
 | Sleep (BT) / wake | `A6 55` … deep sleep … `A6 00` (and `AB A6 FF 01` in 2.4 GHz) |
+
+## Raw HID through the 2.4 GHz dongle
+
+The dongle (USB `0c45:fefe`) has a raw HID interface identical to QMK's: usage page `0xFF60`, usage `0x61`,
+32-byte reports, no report ID. Whatever the host writes there reaches the keyboard as an `81` frame, byte for
+byte (no `AA` header needed), and the 32 bytes of a `91` frame come back as an input report. So Vial, VIA and
+qmk-armed work over the air unchanged: `wireless.c` feeds `81` to `raw_hid_receive()` and sends replies from
+`bluetooth_send_raw_hid()` as `91`. Bluetooth has no such channel.
+
+- The module never ACKs `91`; retrying it only duplicates the reply on the host.
+- A `91` sent right after our ACK of the `81` is lost more often: 3.3 % with a 2 ms gap, 0.7 % with 8 ms
+  (`WL_TUNNEL_GAP_MS`). Round trip is ~20 ms, the first request after idle ~0.4–0.7 s. The host must time out
+  and ask again, and drop replies that arrive late (vial-gui-armed does both).
+- Tunnel traffic resets the auto-sleep timer.
+- Debugging: build with `CONSOLE_ENABLE=yes EXTRAFLAGS="-DWIRELESS_KEEP_USB -DWL_DEBUG_CONSOLE"` to log the
+  frames to `qmk console` (Vial builds otherwise force `NO_DEBUG`).

@@ -36,6 +36,7 @@ USB id (`0c45:8009`) instead of re-enumerating as `0c45:7140`, hence `-v 0c45/80
 ## Updating QMK
 
 1. Enter the bootloader, either way:
+   - from the PC: `keyboards/io/type84_pro/tools/bootloader.py` (QMK 1.5+, mode switch on USB; `flash.sh` runs it);
    - **Fn+Enter → SYSTEM → BOOTLOADER → Fn+Enter**, or
    - unplug the cable, **hold Esc**, plug it back in.
 2. `keyboards/io/type84_pro/flash.sh path/to/firmware.bin` (or `sonixflasher -v 0c45/7140 -f firmware.bin`).
@@ -76,8 +77,8 @@ Settings are reset to factory defaults, exactly like an official update.
 
 ## Permissions
 
-`keyboards/io/type84_pro/udev/70-io-type84-pro.rules` gives the logged-in user access to the keyboard and the
-bootloader (USB and hidraw), so neither `sonixflasher` nor `qmk console` needs sudo:
+`keyboards/io/type84_pro/udev/70-io-type84-pro.rules` gives the logged-in user access to the keyboard, the
+bootloader (USB and hidraw) and the 2.4 GHz dongle's hidraw (Vial through the dongle), so neither `sonixflasher` nor `qmk console` needs sudo:
 
 ```sh
 sudo cp keyboards/io/type84_pro/udev/70-io-type84-pro.rules /etc/udev/rules.d/

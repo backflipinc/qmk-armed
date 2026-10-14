@@ -99,6 +99,7 @@ A request the firmware can't serve comes back with `0xFF` (`id_unhandled`) in th
 | `14` THEME_REVERT | `[2]` slot | edits dropped, the stored theme is back |
 | `15` CLOCK_GET | — | `[2]` 1 = the time is set, `[3..6]` local time (LE) |
 | `16` CLOCK_SET | `[2..5]` local time (LE) | stored |
+| `17` BOOTLOADER | — | echoed, then the keyboard reboots into its bootloader (no Vial unlock needed) |
 
 Lists:
 

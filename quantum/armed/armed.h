@@ -11,7 +11,7 @@
 #define ARMED_PROTOCOL 1
 
 #define ARMED_VERSION_MAJOR 1
-#define ARMED_VERSION_MINOR 4
+#define ARMED_VERSION_MINOR 5
 #define ARMED_VERSION_PATCH 0
 
 enum armed_command {
@@ -32,6 +32,7 @@ enum armed_command {
     ARMED_THEME_REVERT,
     ARMED_CLOCK_GET,
     ARMED_CLOCK_SET,
+    ARMED_BOOTLOADER,
 };
 
 enum armed_feature {

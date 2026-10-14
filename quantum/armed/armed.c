@@ -4,6 +4,7 @@
 #include "armed.h"
 #include "quantum.h"
 #include "via.h"
+#include "raw_hid.h"
 
 __attribute__((weak)) uint16_t armed_features_kb(void) {
     return 0;
@@ -259,6 +260,12 @@ void armed_raw_hid_receive(uint8_t *data, uint8_t length) {
         case ARMED_CLOCK_SET:
             ok = clock_set(data);
             break;
+        case ARMED_BOOTLOADER:
+            // bypasses Vial's unlock on purpose: lets flash scripts reboot the board unattended
+            raw_hid_send(data, length);
+            wait_ms(100);
+            bootloader_jump();
+            return;
         default:
             ok = false;
             break;

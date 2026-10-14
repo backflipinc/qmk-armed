@@ -26,7 +26,7 @@ reporting and auto-sleep all keep working. See [how it compares with the stock f
 | 🎯 **SnapTap** | The SnapTap switch on the case works: opposing keys A/D and W/S never cancel out — last input wins, or neutral |
 | 🔦 **Fn overlay** | Hold Fn and only the keys bound on the Fn layer light up, in a colour of your choice — unless the current theme has its own Fn layers |
 | 📏 **Light bar** | The 9-LED strip under the screen: WPM meter, battery gauge, link status, scanner, Caps alert |
-| 📡 **Wireless** | Bluetooth (5 host slots) and 2.4 GHz dongle via the built-in radio module, pairing from the keyboard |
+| 📡 **Wireless** | Bluetooth (5 host slots) and 2.4 GHz dongle via the built-in radio module, pairing from the keyboard; Vial / Vial Armed work through the dongle too |
 | 🔋 **Battery** | Charge level on screen and in the OS — over Bluetooth, the 2.4 GHz dongle **and** USB (Linux) |
 | 💤 **Power** | Configurable auto-sleep in wireless modes (deep sleep, any key/knob/switch wakes it) |
 | 🛟 **Safety nets** | Hold Esc while plugging in → bootloader; a watchdog drops a hung firmware into the bootloader |
@@ -80,9 +80,9 @@ sudo cp keyboards/io/type84_pro/udev/70-io-type84-pro.rules /etc/udev/rules.d/ &
 keyboards/io/type84_pro/flash.sh               # or flash.sh path/to/io_type84_pro_default.bin
 ```
 
-`flash.sh` puts a **stock** keyboard into its bootloader by itself. On QMK, enter the
-bootloader from the menu (**Fn+Enter → SYSTEM → BOOTLOADER**) or **hold Esc while plugging
-the cable in**. Details, recovery and going back to stock: [docs/flashing.md](docs/flashing.md).
+`flash.sh` puts the keyboard into its bootloader by itself — stock, or this firmware from 1.5 on
+(`tools/bootloader.py`). With older builds, enter the bootloader from the menu
+(**Fn+Enter → SYSTEM → BOOTLOADER**) or **hold Esc while plugging the cable in**. Details, recovery and going back to stock: [docs/flashing.md](docs/flashing.md).
 
 ## Using it
 
@@ -137,11 +137,13 @@ of a pair are held, only one reaches the host — the last one pressed (**LAST**
 
 ### Vial
 
-The default build includes Vial. Set the mode switch to **USB** and open
+The default build includes Vial. Connect the keyboard by **USB**, or set the mode switch to **2.4 GHz** with
+the dongle plugged in, and open
 [Vial](https://get.vial.today) — the keyboard is detected by itself. Keys and knobs can be
 remapped on 4 layers; the keyboard's own keys (Bluetooth slots, pairing, menu, sleep timer)
 are under **User**. Changes that need unlocking ask you to hold **Caps + Enter**.
-Vial only talks to the keyboard over USB.
+Through the dongle every request takes ~20 ms, so connecting takes a few seconds; regular Vial doesn't recognise
+the dongle (no Vial serial number), Vial Armed does. Bluetooth has no channel for it.
 
 [**Vial Armed**](https://github.com/backflipinc/vial-gui-armed) is a Vial fork made for this firmware, in the
 same design as the screen UI. On top of everything Vial does, it sets what stock Vial can't: all effects
@@ -169,7 +171,8 @@ regular Vial keeps working as before.
 - Tested on one keyboard (stock firmware v1.32), on Linux.
 - The clock is set by Vial Armed when it connects (the RTC chip keeps it through sleep and unplugging); other host data on the screen (CPU load, …) is not implemented yet.
 - The SPI flash with the stock screen animations is not used.
-- Vial works over USB only; in BT / 2.4 GHz the keyboard is off the USB bus.
+- Vial works over USB and the 2.4 GHz dongle, not over Bluetooth (the radio module has no channel for it).
+  Screen animations are transferred over USB only (megabytes at ~20 ms per 28-byte packet).
 - System power keys and mouse keys are not sent over the air (format unverified).
 - The USB battery report narrows QMK's *System Control* report to power / sleep / wake, so
   `KC_SYSTEM_RESTART` and similar rarely used keys do nothing.

@@ -25,6 +25,13 @@
 #include "ledscan.h"
 #include "spiflash.h"
 #include "settings.h"
+#include "raw_hid.h"
+
+#ifdef WL_DEBUG_CONSOLE
+// Vial builds force NO_DEBUG
+#    undef dprintf
+#    define dprintf(...) xprintf(__VA_ARGS__)
+#endif
 
 #ifndef USB_GETSTATUS_REMOTE_WAKEUP_ENABLED
 #    define USB_GETSTATUS_REMOTE_WAKEUP_ENABLED (2U) // как в tmk_core/protocol/chibios/chibios.c
@@ -36,6 +43,9 @@
 
 #ifndef WL_ACK_TIMEOUT_MS
 #    define WL_ACK_TIMEOUT_MS 15 // ждём "a\r\n" (в стоке 5 тиков)
+#endif
+#ifndef WL_TUNNEL_GAP_MS
+#    define WL_TUNNEL_GAP_MS 8 // fewer replies lost over the air than with WL_FRAME_GAP_MS (A/B: 3.3% -> 0.7%)
 #endif
 #ifndef WL_RETRIES
 #    define WL_RETRIES 3 // повторов кадра, как в стоке
@@ -189,6 +199,12 @@ static void wl_send_head(void) {
     frame_t *f = &queue[q_head % QUEUE_LEN];
     uart2_write(f->data, f->len);
     wl_debug_frame(">", f->data, f->len);
+    // the module never ACKs tunnel replies; retrying would duplicate them on the host
+    if (f->data[0] == 0x91) {
+        q_head++;
+        last_tx_done = timer_read();
+        return;
+    }
     waiting_ack = true;
     sent_at     = timer_read();
 }
@@ -198,6 +214,7 @@ static void wl_service_tx(void) {
         static const uint8_t ack[] = {0x61, 0x0D, 0x0A};
         need_ack                   = false;
         uart2_write(ack, sizeof(ack));
+        last_tx_done = timer_read();
     }
 
     if (waiting_ack) {
@@ -216,7 +233,9 @@ static void wl_service_tx(void) {
         return;
     }
 
-    if (q_count() == 0 || timer_elapsed(last_tx_done) < WL_FRAME_GAP_MS) return;
+    if (q_count() == 0) return;
+    uint8_t gap = queue[q_head % QUEUE_LEN].data[0] == 0x91 ? WL_TUNNEL_GAP_MS : WL_FRAME_GAP_MS;
+    if (timer_elapsed(last_tx_done) < gap) return;
 
     if (module_asleep) {
         // как в стоке (sub_05954): A6 00 + сумма, без ожидания ACK, потом 3 мс
@@ -236,6 +255,12 @@ static void wl_service_tx(void) {
 
 static wl_link_t link_state = WL_LINK_UNKNOWN;
 static uint8_t   host_leds;
+
+#ifdef RAW_ENABLE
+// Handled from bluetooth_task: replying via wl_queue() may re-enter wl_service_rx()
+static uint8_t tunnel_rx[32];
+static bool    tunnel_pending;
+#endif
 
 static void wl_on_ack(void) {
     if (waiting_ack) {
@@ -305,7 +330,12 @@ static void wl_service_rx(void) {
             if (s == frame[len - 1]) {
                 need_ack = true;
                 if (len == 3) wl_on_frame3(frame);
-                // 81 — туннель конфигуратора через донгл: не поддерживаем
+#ifdef RAW_ENABLE
+                else if (!tunnel_pending) {
+                    memcpy(tunnel_rx, &frame[1], sizeof(tunnel_rx));
+                    tunnel_pending = true;
+                }
+#endif
             } else {
                 dprintf("WL bad sum\n");
             }
@@ -693,6 +723,9 @@ void bluetooth_init(void) {
 }
 
 void bluetooth_task(void) {
+#ifdef WL_DEBUG_CONSOLE
+    debug_enable = true;
+#endif
     static wl_mode_t pending = WL_MODE_USB;
     static uint16_t  pending_since;
 
@@ -714,11 +747,29 @@ void bluetooth_task(void) {
     last_link = link_state;
 
     wl_service_rx();
+#ifdef RAW_ENABLE
+    if (tunnel_pending) {
+        uint8_t buf[32];
+        memcpy(buf, tunnel_rx, sizeof(buf));
+        tunnel_pending = false;
+        if (mode == WL_MODE_24G) {
+            idle_ref = timer_read32();
+            raw_hid_receive(buf, sizeof(buf));
+        }
+    }
+#endif
     wl_service_tx();
     hold_task();
     usb_suspend_task();
     sleep_task();
 }
+
+#ifdef RAW_ENABLE
+void bluetooth_send_raw_hid(uint8_t *data, uint8_t length) {
+    if (mode != WL_MODE_24G || length != 32) return;
+    wl_queue(0x91, data, length);
+}
+#endif
 
 bool bluetooth_is_connected(void) {
     return link_state == WL_LINK_CONNECTED;

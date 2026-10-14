@@ -3,9 +3,8 @@
 #
 # Usage: ./flash.sh [firmware.bin]   (default: io_type84_pro_default.bin in the qmk-armed root)
 #
-# Put the keyboard into its bootloader first:
-#   - from QMK:   Fn+Enter -> SYSTEM -> BOOTLOADER -> Fn+Enter, or hold Esc while plugging in;
-#   - from stock: nothing to do, this script sends the stock "reboot to bootloader" request.
+# Over USB the script reboots the keyboard into its bootloader itself (QMK: tools/bootloader.py,
+# stock: the stock request). Otherwise: Fn+Enter -> SYSTEM -> BOOTLOADER, or hold Esc while plugging in.
 # The mode switch must be on USB (in BT/2.4G the keyboard disconnects from USB).
 set -euo pipefail
 
@@ -24,10 +23,9 @@ present() { lsusb | grep -qi "${1/\//:}"; }
 if present "$BOOT"; then
     DEV="$BOOT"
 elif present "$KBD"; then
-    echo "Keyboard found, asking stock firmware to reboot into the bootloader..."
-    echo "(on QMK firmware this does nothing — use the menu or hold Esc while plugging in)"
-    "$FLASHER" -v "$KBD" -r hfd >/dev/null 2>&1 || true
-    sleep 1
+    echo "Keyboard found, asking it to reboot into the bootloader..."
+    python3 "$HERE/tools/bootloader.py" 2>/dev/null || "$FLASHER" -v "$KBD" -r hfd >/dev/null 2>&1 || true
+    for _ in $(seq 10); do present "$BOOT" && break; sleep 0.3; done
     # entered from stock, the ROM keeps answering on the keyboard's USB id
     if present "$BOOT"; then DEV="$BOOT"; else DEV="$KBD"; fi
 else
