@@ -155,7 +155,7 @@ regular Vial keeps working as before.
 
 The main screen is a layout of widgets you can change: text with live values, bars, graphs, indicator tiles, the
 battery icon, frames and lines, multi-line text. [Vial Armed](https://github.com/backflipinc/vial-gui-armed)'s
-**HUD** page edits it on a pixel-exact preview (the keyboard's own fonts and colour roles, so it keeps the look of
+**Screen > HUD editor** edits it on a pixel-exact preview (the keyboard's own fonts and colour roles, so it keeps the look of
 the firmware and follows DISPLAY > ACCENT); every change is live, SAVE stores it on the keyboard, START FROM >
 KEYBOARD DEFAULT brings back the stock layout.
 

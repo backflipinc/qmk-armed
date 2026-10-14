@@ -168,7 +168,7 @@ come back in order with their sequence numbers. A failed report answers `0xFF` a
 is refused; send SCREEN_END with 0. The new animation becomes visible only after a successful SCREEN_END,
 an aborted upload leaves none.
 
-[Vial Armed](https://github.com/backflipinc/vial-gui-armed) has a Screen page for it;
+[Vial Armed](https://github.com/backflipinc/vial-gui-armed) has it under Screen > Settings;
 `keyboards/io/type84_pro/tools/screen.py` is a command line uploader (images, GIFs, video).
 Keyboard side: implement `armed_screen_info_kb()`, `armed_screen_begin_kb()`, `armed_screen_write_kb()`
 (the decoded animation in order), `armed_screen_end_kb()` and `armed_screen_read_kb()`; see
@@ -178,7 +178,7 @@ Keyboard side: implement `armed_screen_info_kb()`, `armed_screen_begin_kb()`, `a
 
 A theme is a stack of up to 8 layers drawn bottom to top, plus a colour for every LED. Each slot is an
 RGB Matrix effect (`THEME_1`, ...), so it is picked like any other effect; global brightness applies.
-[Vial Armed](https://github.com/backflipinc/vial-gui-armed) has a Themes page that edits them live.
+[Vial Armed](https://github.com/backflipinc/vial-gui-armed) edits them live under Lighting > Theme editor.
 
 Keyboard side: define `ARMED_THEMES` (1..8 slots) in `config.h`, add `#include "armed_theme_effects.inc"` to
 `rgb_matrix_kb.inc` (under `#ifdef ARMED_ENABLE`) and implement `armed_theme_load_kb()` / `armed_theme_save_kb()`
@@ -237,7 +237,7 @@ it is random).
 
 A keyboard with a Quantum Painter screen can let the host lay out its main screen: a list of up to 40 widgets
 drawn in order, in the keyboard's own fonts and colours. [Vial Armed](https://github.com/backflipinc/vial-gui-armed)
-has a HUD page with a pixel-exact preview (it reads the fonts with HUD_FONT and redraws what `armed_hud.c` draws)
+has a HUD editor (Screen > HUD editor) with a pixel-exact preview (it reads the fonts with HUD_FONT and redraws what `armed_hud.c` draws)
 and an agent that feeds the screen with the computer's metrics and the output of commands.
 
 Keyboard side: call `armed_hud_init(device, fonts, count)` once the display is up and `armed_hud_draw(all)` where the
