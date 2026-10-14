@@ -16,4 +16,12 @@ void    ui_set_screen_mode(uint8_t mode);
 #define UI_CLOCK_FORMATS 3 // часы на HUD: 0 — 24H, 1 — 12H, 2 — OFF
 uint8_t ui_clock_format(void);
 void    ui_set_clock_format(uint8_t format);
+uint8_t     ui_accent_count(void);
+const char *ui_accent_name(uint8_t i, uint8_t *h, uint8_t *s);
+uint8_t     ui_accent(void);
+void        ui_set_accent(uint8_t i);
+uint8_t     ui_screen_off_count(void);
+const char *ui_screen_off_name(uint8_t i, uint16_t *seconds);
+uint8_t     ui_screen_off(void);
+void        ui_set_screen_off(uint8_t i);
 bool ui_process(uint16_t keycode, keyrecord_t *record); // false — событие съедено

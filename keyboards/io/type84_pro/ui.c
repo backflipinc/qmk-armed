@@ -917,6 +917,46 @@ void ui_set_screen_mode(uint8_t mode) {
     full_redraw = true;
 }
 
+uint8_t ui_accent_count(void) {
+    return ARRAY_SIZE(accents);
+}
+
+const char *ui_accent_name(uint8_t i, uint8_t *h, uint8_t *s) {
+    *h = accents[i].c.h;
+    *s = accents[i].c.s;
+    return accents[i].name;
+}
+
+uint8_t ui_accent(void) {
+    return accent_idx;
+}
+
+void ui_set_accent(uint8_t i) {
+    if (i >= ARRAY_SIZE(accents)) return;
+    accent_idx = i;
+    settings_save();
+    full_redraw = true;
+}
+
+uint8_t ui_screen_off_count(void) {
+    return ARRAY_SIZE(screen_timeouts);
+}
+
+const char *ui_screen_off_name(uint8_t i, uint16_t *seconds) {
+    *seconds = screen_timeouts[i].sec;
+    return screen_timeouts[i].name;
+}
+
+uint8_t ui_screen_off(void) {
+    return scr_to_idx;
+}
+
+void ui_set_screen_off(uint8_t i) {
+    if (i >= ARRAY_SIZE(screen_timeouts)) return;
+    scr_to_idx = i;
+    settings_save();
+}
+
 uint8_t ui_clock_format(void) {
     return clock_fmt;
 }

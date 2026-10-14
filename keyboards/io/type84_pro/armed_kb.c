@@ -9,6 +9,7 @@
 #    include "strip.h"
 #    include "wireless.h"
 #    include "spiflash.h"
+#    include "snaptap.h"
 #    ifdef QUANTUM_PAINTER_ENABLE
 #        include "ui.h"
 #    endif
@@ -51,9 +52,9 @@ bool armed_hud_save_kb(const uint8_t *data, uint16_t size) {
 #    endif
 
 uint16_t armed_features_kb(void) {
-    uint16_t f = ARMED_F_COLOR2 | ARMED_F_FN_COLOR | ARMED_F_STRIP | ARMED_F_SLEEP;
+    uint16_t f = ARMED_F_COLOR2 | ARMED_F_FN_COLOR | ARMED_F_STRIP | ARMED_F_SLEEP | ARMED_F_SNAPTAP | ARMED_F_BT_SLOT;
 #    ifdef QUANTUM_PAINTER_ENABLE
-    f |= ARMED_F_SCREEN | ARMED_F_CLOCK;
+    f |= ARMED_F_SCREEN | ARMED_F_CLOCK | ARMED_F_DISPLAY;
 #    endif
     return f;
 }
@@ -66,6 +67,14 @@ uint8_t armed_list_count_kb(uint8_t list) {
             return STRIP_MODES;
         case ARMED_L_SLEEP:
             return wireless_sleep_option_count();
+        case ARMED_L_SNAPTAP_MODES:
+            return SNAPTAP_MODES;
+#    ifdef QUANTUM_PAINTER_ENABLE
+        case ARMED_L_ACCENTS:
+            return ui_accent_count();
+        case ARMED_L_SCREEN_OFF:
+            return ui_screen_off_count();
+#    endif
     }
     return 0;
 }
@@ -83,6 +92,21 @@ bool armed_list_entry_kb(uint8_t list, uint8_t idx, uint8_t *out, uint8_t length
         case ARMED_L_SLEEP:
             out[0] = wireless_sleep_option_minutes(idx);
             return true;
+        case ARMED_L_SNAPTAP_MODES:
+            armed_put_name(out, length, snaptap_mode_name(idx));
+            return true;
+#    ifdef QUANTUM_PAINTER_ENABLE
+        case ARMED_L_ACCENTS: // like the colour presets: H, S, name
+            armed_put_name(&out[2], length - 2, ui_accent_name(idx, &out[0], &out[1]));
+            return true;
+        case ARMED_L_SCREEN_OFF: { // seconds (LE), 0 = never; name
+            uint16_t sec;
+            armed_put_name(&out[2], length - 2, ui_screen_off_name(idx, &sec));
+            out[0] = sec & 0xFF;
+            out[1] = sec >> 8;
+            return true;
+        }
+#    endif
     }
     return false;
 }
@@ -111,7 +135,19 @@ bool armed_get_value_kb(uint8_t id, uint8_t *out) {
         case ARMED_V_SLEEP:
             *out = wireless_sleep_index();
             return true;
+        case ARMED_V_SNAPTAP:
+            *out = snaptap_mode();
+            return true;
+        case ARMED_V_BT_SLOT:
+            *out = wireless_bt_slot();
+            return true;
 #    ifdef QUANTUM_PAINTER_ENABLE
+        case ARMED_V_ACCENT:
+            *out = ui_accent();
+            return true;
+        case ARMED_V_SCREEN_OFF:
+            *out = ui_screen_off();
+            return true;
         case ARMED_V_SCREEN:
             *out = ui_screen_mode();
             return true;
@@ -148,7 +184,23 @@ bool armed_set_value_kb(uint8_t id, uint8_t v) {
             if (v >= wireless_sleep_option_count()) return false;
             wireless_sleep_set_index(v);
             return true;
+        case ARMED_V_SNAPTAP:
+            if (v >= SNAPTAP_MODES) return false;
+            snaptap_set_mode(v);
+            return true;
+        case ARMED_V_BT_SLOT:
+            if (v < 1 || v > 5) return false;
+            wireless_select_slot(v);
+            return true;
 #    ifdef QUANTUM_PAINTER_ENABLE
+        case ARMED_V_ACCENT:
+            if (v >= ui_accent_count()) return false;
+            ui_set_accent(v);
+            return true;
+        case ARMED_V_SCREEN_OFF:
+            if (v >= ui_screen_off_count()) return false;
+            ui_set_screen_off(v);
+            return true;
         case ARMED_V_SCREEN:
             if (v >= UI_SCREEN_MODES) return false;
             ui_set_screen_mode(v);

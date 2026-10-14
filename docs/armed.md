@@ -33,6 +33,10 @@ Anything beyond RGB Matrix is a feature the keyboard declares and implements thr
 | `ARMED_F_THEMES` (set by the core) | — | lighting themes, see below |
 | `ARMED_F_CLOCK` | — | clock format; plus the clock commands below |
 | `ARMED_F_HUD` (set by the core) | — | the main screen built from widgets and fed by the host, see [HUD](#hud) |
+| `ARMED_F_KEYMAP` (set by the core) | — | NKRO (with `NKRO_ENABLE`), GUI lock |
+| `ARMED_F_SNAPTAP` | SnapTap modes | SnapTap mode |
+| `ARMED_F_DISPLAY` | UI accents, screen-off timeouts | UI accent, screen-off timeout |
+| `ARMED_F_BT_SLOT` | — | Bluetooth slot (1..5) |
 
 ```c
 #include "armed.h"
@@ -122,10 +126,17 @@ Lists:
 | `2` | light bar modes | `[4..]` name |
 | `3` | sleep options | `[4]` minutes, 0 = off |
 | `4` | LEDs | `[4]` row, `[5]` col (`0xFF` if not under a key), `[6]` x, `[7]` y, `[8]` flags |
+| `5` | SnapTap modes | `[4..]` name |
+| `6` | UI accents | `[4]` H, `[5]` S, `[6..]` name |
+| `7` | screen-off timeouts | `[4..5]` seconds (LE), 0 = never, `[6..]` name |
+
+Lists 5 and up aren't sized in INFO (that would move the bytes after the list sizes): read them until the keyboard
+answers `0xFF`.
 
 Values: `0` lighting on, `1` effect (QMK mode id), `2` colour 2, `3` Fn colour, `4` light bar mode,
 `5` light bar colour, `6` Caps alert, `7` sleep option, `8` hue, `9` saturation, `10` brightness, `11` speed,
-`12` main screen (0 = HUD, 1 = the uploaded animation), `13` clock (0 = 24H, 1 = 12H, 2 = off).
+`12` main screen (0 = HUD, 1 = the uploaded animation), `13` clock (0 = 24H, 1 = 12H, 2 = off), `14` NKRO,
+`15` GUI lock, `16` SnapTap mode, `17` UI accent, `18` screen-off timeout (indexes into their lists), `19` Bluetooth slot.
 Colours are indexes into the colour preset list.
 
 Hue, saturation, brightness and speed skip EEPROM writes, so a slider can stream them; the app sends SAVE

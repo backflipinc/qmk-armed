@@ -39,6 +39,7 @@ void armed_put_name(uint8_t *dst, uint8_t length, const char *name) {
 static uint16_t features(void) {
     uint16_t f = armed_features_kb();
     if (armed_hud_ready()) f |= ARMED_F_HUD;
+    f |= ARMED_F_KEYMAP;
 #ifdef RGB_MATRIX_ENABLE
     f |= ARMED_F_RGB_MATRIX;
 #    if defined(ARMED_THEMES) && ARMED_THEMES > 0
@@ -100,6 +101,14 @@ static bool list_entry(uint8_t *data, uint8_t length) {
 
 static bool get_value(uint8_t id, uint8_t *out) {
     switch (id) {
+#ifdef NKRO_ENABLE
+        case ARMED_V_NKRO:
+            *out = keymap_config.nkro;
+            return true;
+#endif
+        case ARMED_V_GUI_LOCK:
+            *out = keymap_config.no_gui;
+            return true;
 #ifdef RGB_MATRIX_ENABLE
         case ARMED_V_ENABLED:
             *out = rgb_matrix_is_enabled();
@@ -127,6 +136,18 @@ static bool get_value(uint8_t id, uint8_t *out) {
 
 static bool set_value(uint8_t id, uint8_t v) {
     switch (id) {
+#ifdef NKRO_ENABLE
+        case ARMED_V_NKRO:
+            clear_keyboard(); // nothing stays pressed across the report switch
+            keymap_config.nkro = v != 0;
+            eeconfig_update_keymap(&keymap_config);
+            return true;
+#endif
+        case ARMED_V_GUI_LOCK:
+            clear_keyboard();
+            keymap_config.no_gui = v != 0;
+            eeconfig_update_keymap(&keymap_config);
+            return true;
 #ifdef RGB_MATRIX_ENABLE
         case ARMED_V_ENABLED:
             v ? rgb_matrix_enable() : rgb_matrix_disable();

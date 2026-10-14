@@ -56,6 +56,10 @@ enum armed_feature {
     ARMED_F_THEMES     = 1 << 6,
     ARMED_F_CLOCK      = 1 << 7,
     ARMED_F_HUD        = 1 << 8,
+    ARMED_F_KEYMAP     = 1 << 9, // set by the core: NKRO, GUI lock
+    ARMED_F_SNAPTAP    = 1 << 10,
+    ARMED_F_DISPLAY    = 1 << 11, // UI accent, screen-off timeout
+    ARMED_F_BT_SLOT    = 1 << 12,
 };
 
 enum armed_list {
@@ -64,7 +68,10 @@ enum armed_list {
     ARMED_L_STRIP_MODES,
     ARMED_L_SLEEP,
     ARMED_L_LEDS,
-    ARMED_L_COUNT,
+    ARMED_L_COUNT, // lists sized in INFO; the ones below are read until 0xFF
+    ARMED_L_SNAPTAP_MODES = ARMED_L_COUNT,
+    ARMED_L_ACCENTS,
+    ARMED_L_SCREEN_OFF,
 };
 
 enum armed_value {
@@ -82,6 +89,12 @@ enum armed_value {
     ARMED_V_SPEED,
     ARMED_V_SCREEN,
     ARMED_V_CLOCK,
+    ARMED_V_NKRO,
+    ARMED_V_GUI_LOCK,
+    ARMED_V_SNAPTAP,
+    ARMED_V_ACCENT,
+    ARMED_V_SCREEN_OFF,
+    ARMED_V_BT_SLOT,
 };
 
 // effect flags in the effect list
