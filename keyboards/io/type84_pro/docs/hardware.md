@@ -122,7 +122,8 @@ sequence (see `lcd_stock_init` in `type84_pro.c`) with 150 ms after sleep-out.
 ## Radio module (Bluetooth + 2.4 GHz)
 
 A separate module on **UART2: TX P1.7 `B7`, RX P1.6 `B6`**, 115200 8N1. Protocol:
-[radio-protocol.md](radio-protocol.md).
+[radio-protocol.md](radio-protocol.md), which also covers the 2.4 GHz dongle and the related Hangsheng module.
+The chips in the module and the dongle are unknown; the dongle is sealed.
 
 ## Power
 

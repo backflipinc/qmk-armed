@@ -35,7 +35,7 @@ and the next frame is preceded by a wake-up `A6 00 A6`.
 | `A6` | `51` | **start pairing** on the selected slot / 2.4 GHz (send right after the slot code) |
 | `A6` | `55` | going to sleep (Bluetooth) |
 | `A6` | `00` | wake-up poke |
-| `A6` | `52`, `53` | ⚠️ unknown |
+| `A6` | `52`, `53` | ⚠️ unknown; in the related Hangsheng module `52` clears the pairings and `53` asks for the battery voltage (reply `5C`), see below |
 | `A7` | 0–100 | battery level, % — the module reports it to the host over Bluetooth; the 2.4 GHz dongle doesn't expose it |
 | `A8` | 5 bytes: buttons, X, Y, wheel, … | mouse ⚠️ (not used) |
 | `A9` | `n` + name | Bluetooth device name ⚠️ (not used; the module keeps its own) |
@@ -56,7 +56,7 @@ Three-byte frames (several may arrive back to back), plus one 34-byte frame type
 | `5B 34 SS` | searching / reconnecting (arrives before `33` / `32`) |
 | `5B 23 SS` | sent at module start-up (ignored) |
 | `5B 42 9D` | ping, reply with ACK |
-| `5C vv SS` | ⚠️ accepted, no action in the stock firmware |
+| `5C vv SS` | ⚠️ accepted, no action in the stock firmware (battery level in the Hangsheng module) |
 | `81` + 32 bytes + SUM | raw HID request through the dongle (2.4 GHz only), see below |
 
 ## Sequences
@@ -84,3 +84,47 @@ qmk-armed work over the air unchanged: `wireless.c` feeds `81` to `raw_hid_recei
 - Tunnel traffic resets the auto-sleep timer.
 - Debugging: build with `CONSOLE_ENABLE=yes EXTRAFLAGS="-DWIRELESS_KEEP_USB -DWL_DEBUG_CONSOLE"` to log the
   frames to `qmk console` (Vial builds otherwise force `NO_DEBUG`).
+
+## The 2.4 GHz dongle
+
+What can be seen from the host without opening it (it is sealed):
+
+| | |
+|---|---|
+| USB | `0c45:fefe`, "IO Type 84 Pro BL 2.4G", bcdDevice 1.38, USB 1.1 full speed, EP0 8 bytes, no manufacturer or serial string |
+| Interfaces | 0: boot keyboard (8 B) · 1: mouse (8 B) · 2: consumer / system / NKRO, report IDs 1–3, 5 (vendor `0xFFFF`, 3 B), 6 (digitizer) · 3: raw HID `0xFF60`, 32 B in/out — the tunnel above · 4: vendor `0xFF59`, 64 B in/out |
+| Own replies | `55 FC 04` on interface 2 when the keyboard drops off (the stock configurator's `GET_24G_DISCONNECT_NOTIFY`); `0f 01 01 11` on `0xFF59` to a stock `AA 80` request. Unknown `0xFF59` commands were not tried: one may well unpair or erase |
+| Battery | none: no Battery Strength usage, `GET_REPORT` stalls, nothing arrives when the keyboard (re)sends `A7`. Not on stock either — the stock configurator reads the level from the keyboard through the tunnel |
+| Updates | no known way: the stock configurator's OTA commands (`AA 80`–`86`) are passed through to the keyboard, the update manifest has no dongle images. The name is baked into the dongle, the stock keyboard firmware doesn't send it |
+
+The same VID/PID is used by dozens of brands (Aula, Ajazz, Womier, Fantech, … — see the device list in
+web.io.vision), so it is an OEM dongle with per-brand names. The chip is unknown; there was no way to
+dump the firmware over USB.
+
+**Pairing.** The MCU side is all there is to it: `A6 30`, `A6 51`, then `5B 33` while the module searches
+and `5B 32` once linked. The radio link itself is proprietary and undocumented. Comparable designs
+(Panchip PAN1080, WCH CH58x) pair on a fixed public address and channel list during a few-second window,
+after which the dongle keeps the module's unique address and both hop over a channel list with
+retransmissions — an Enhanced ShockBurst-like link. Likely the same here, but unverified.
+
+## Related modules
+
+**Hangsheng** (hangshengkeji, used by Epomaker / Linker boards) publishes a QMK driver for a module of the
+same family: [`keyboards/linker/wireless/module.h`](https://github.com/hangshengkeji/qmk_firmware/blob/tri-mode/keyboards/linker/wireless/module.h),
+branch `tri-mode`. Same framing and `a\r\n` ACK, same `A1`–`A6` reports and mode codes (`A6 11`, `30`,
+`31`–`35`, `51`), `5A` for host LEDs, `5B` for link state. The firmware generation differs:
+
+| | Hangsheng | IO Type 84 Pro |
+|---|---|---|
+| Raw HID tunnel | `AF 61 <len> …` / `AF 60 <len> …` | `81` / `91` |
+| Battery | the module measures it: `A6 53` → `5C <level>` | the MCU sends `A7 <percent>` |
+| Link state `5B` | `31` pairing, `32` connected, `33` disconnected | `33` pairing, `32` connected, `31` disconnected |
+| Dongle identity | set from the keyboard: `AB` manufacturer, `AC` product, `AD` VID/PID | fixed in the dongle (`AB` is used differently) |
+| Extra `A6` codes | `52` clear pairings, `55`–`58` module sleep, `62`/`63` forced pairing, `64`–`66` charging state, `70` module firmware version | only `00`, `11`, `30`–`35`, `51`, `55` confirmed |
+
+Their battery goes to the host over Bluetooth only as well.
+
+**WCH** sells a generic tri-mode module with a published but different protocol (`55` header + length,
+`81`–`8B` reports, `40`–`4A` control, `F0` ACK):
+[scheme](https://www.cnblogs.com/azou/p/17503122.html), [protocol](https://www.cnblogs.com/azou/p/17195990.html).
+It also lists battery display for Bluetooth only.
