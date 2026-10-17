@@ -112,8 +112,8 @@ A request the firmware can't serve comes back with `0xFF` (`id_unhandled`) in th
 | `22` HUD_PALETTE | `[2]` colour role | `[3..5]` H, S, V as the keyboard draws it now (the accent can change) |
 | `23` HUD_READ | `[2..3]` offset, `[4]` length (≤ 27) | `[5..]` bytes of the layout the keyboard shows |
 | `24` HUD_WRITE | `[2..3]` offset, `[4]` length (≤ 27), `[5..]` bytes | written; the HUD stops drawing until APPLY (3 s at most) |
-| `25` HUD_APPLY | `[2]` 1 = also store | checked and shown; a bad layout answers `0xFF` and the stored one comes back |
-| `26` HUD_REVERT | `[2]` 0 = the stored layout, 1 = the built-in default | shown, not stored |
+| `25` HUD_APPLY | `[2]` 1 = also store | checked and shown (a repeated APPLY with no HUD_WRITE since does not redraw); a bad layout answers `0xFF` and the stored one comes back |
+| `26` HUD_REVERT | `[2]` 0 = the stored layout, 1 = the built-in default | shown, not stored (no redraw when the layout does not change) |
 | `27` HUD_PUSH | `[2]` seconds the values stay valid (0 = until replaced), `[3]` count (≤ 4), then per value `slot`, `decimals`, number (4 bytes LE, signed) | **no reply** |
 | `28` HUD_TEXT | `[2]` slot, `[3]` seconds valid, `[4]` offset, `[5]` length (≤ 25), `[6]` 1 = last piece, `[7..]` ASCII | **no reply**; pieces in order, starting at offset 0 |
 

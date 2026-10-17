@@ -332,9 +332,20 @@ static void setup(void) {
     redraw_all = true;
 }
 
-static void load(void) {
+static void fetch(void) {
     if (!armed_hud_load_kb((uint8_t *)&layout, sizeof(layout)) || !valid()) defaults();
+}
+
+static void load(void) {
+    fetch();
     setup();
+}
+
+static uint32_t layout_hash(void) {
+    const uint8_t *p = (const uint8_t *)&layout;
+    uint32_t       h = 2166136261u;
+    for (uint16_t i = 0; i < sizeof(layout); i++) h = (h ^ p[i]) * 16777619u;
+    return h;
 }
 
 static const char *label_of(const armed_hud_widget_t *wd) {
@@ -918,24 +929,29 @@ bool armed_hud_receive(uint8_t *d, uint8_t length) {
                 break;
             }
             case ARMED_HUD_APPLY:
-                editing = false;
                 if (!valid()) {
+                    editing = false;
                     load();
                     ok = false;
                     break;
                 }
-                setup();
+                // a host retrying over the radio repeats APPLY; redraw only for new data
+                if (editing) setup();
+                editing = false;
                 if (d[2]) ok = armed_hud_save_kb((const uint8_t *)&layout, sizeof(layout));
                 break;
-            case ARMED_HUD_REVERT:
-                editing = false;
+            case ARMED_HUD_REVERT: {
+                uint32_t was = layout_hash();
                 if (d[2]) {
                     defaults();
-                    setup();
                 } else {
-                    load();
+                    fetch();
                 }
+                // same as for APPLY: a repeated REVERT must not redraw again
+                if (editing || layout_hash() != was) setup();
+                editing = false;
                 break;
+            }
             default:
                 ok = false;
         }
