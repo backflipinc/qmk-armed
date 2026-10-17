@@ -23,7 +23,11 @@
 #            define FEE_PAGE_SIZE 0x400 // Page size = 1KByte
 #        endif
 #        ifndef FEE_PAGE_COUNT
-#            define FEE_PAGE_COUNT 8  // How many pages are used
+#            ifdef VIAL_ENABLE
+#                define FEE_PAGE_COUNT 8 // Vial needs the larger EEPROM
+#            else
+#                define FEE_PAGE_COUNT 2 // How many pages are used
+#            endif
 #        endif
 #    elif defined(STM32F103xE) || defined(STM32F303xC) || defined(STM32F303xE) || defined(STM32F072xB) || defined(STM32F070xB)
 #        ifndef FEE_PAGE_SIZE

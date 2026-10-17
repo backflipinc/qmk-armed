@@ -63,12 +63,17 @@
 #    endif
 #endif
 
-// 8kB backing space allocated
+// Vial: 8kB backing space (4kB EEPROM for combos, tap dance etc.), upstream: 2kB.
+// The logical EEPROM is cached in RAM, so 8kB-RAM chips may need to set a smaller size
 #ifndef WEAR_LEVELING_BACKING_SIZE
-#    define WEAR_LEVELING_BACKING_SIZE 8192
+#    ifdef VIAL_ENABLE
+#        define WEAR_LEVELING_BACKING_SIZE 8192
+#    else
+#        define WEAR_LEVELING_BACKING_SIZE 2048
+#    endif
 #endif // WEAR_LEVELING_BACKING_SIZE
 
-// 4kB logical EEPROM
+// Half of the backing space
 #ifndef WEAR_LEVELING_LOGICAL_SIZE
 #    define WEAR_LEVELING_LOGICAL_SIZE ((WEAR_LEVELING_BACKING_SIZE) / 2)
 #endif // WEAR_LEVELING_LOGICAL_SIZE
