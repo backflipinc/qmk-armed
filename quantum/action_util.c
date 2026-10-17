@@ -120,12 +120,12 @@ enum {
 
 static uint16_t oneshot_layer_time = 0;
 inline bool     has_oneshot_layer_timed_out(void) {
-    return TIMER_DIFF_16(timer_read(), oneshot_layer_time) >= QS_oneshot_timeout && !(get_oneshot_layer_state() & ONESHOT_TOGGLED);
+    return QS_oneshot_timeout > 0 && TIMER_DIFF_16(timer_read(), oneshot_layer_time) >= QS_oneshot_timeout && !(get_oneshot_layer_state() & ONESHOT_TOGGLED);
 }
 #        ifdef SWAP_HANDS_ENABLE
 static uint16_t oneshot_swaphands_time = 0;
 inline bool     has_oneshot_swaphands_timed_out(void) {
-    return TIMER_DIFF_16(timer_read(), oneshot_swaphands_time) >= QS_oneshot_timeout && (swap_hands_oneshot == SHO_ACTIVE);
+    return QS_oneshot_timeout > 0 && TIMER_DIFF_16(timer_read(), oneshot_swaphands_time) >= QS_oneshot_timeout && (swap_hands_oneshot == SHO_ACTIVE);
 }
 #        endif
 

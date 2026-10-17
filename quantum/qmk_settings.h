@@ -88,12 +88,14 @@
 /* ========================================================================== */
 /* One shot keys                                                              */
 /* ========================================================================== */
-#ifndef ONESHOT_TAP_TOGGLE
-#define ONESHOT_TAP_TOGGLE 5
-#endif
-
-#ifndef ONESHOT_TIMEOUT
-#define ONESHOT_TIMEOUT 5000
+// Vial's defaults; without QMK settings both stay off unless config.h sets them, as upstream
+#ifdef QMK_SETTINGS
+#    ifndef ONESHOT_TAP_TOGGLE
+#        define ONESHOT_TAP_TOGGLE 5
+#    endif
+#    ifndef ONESHOT_TIMEOUT
+#        define ONESHOT_TIMEOUT 5000
+#    endif
 #endif
 
 #ifdef QMK_SETTINGS
@@ -216,8 +218,16 @@ extern qmk_settings_t QS;
 #define QS_auto_shift_no_auto_repeat AUTO_SHIFT_NO_AUTO_REPEAT_Defined
 
 /* One Shot Keys */
-#define QS_oneshot_tap_toggle ONESHOT_TAP_TOGGLE
-#define QS_oneshot_timeout ONESHOT_TIMEOUT
+#ifdef ONESHOT_TAP_TOGGLE
+#    define QS_oneshot_tap_toggle ONESHOT_TAP_TOGGLE
+#else
+#    define QS_oneshot_tap_toggle 0
+#endif
+#ifdef ONESHOT_TIMEOUT
+#    define QS_oneshot_timeout ONESHOT_TIMEOUT
+#else
+#    define QS_oneshot_timeout 0
+#endif
 
 /* Mouse keys */
 #define QS_mousekey_move_delta MOUSEKEY_MOVE_DELTA
