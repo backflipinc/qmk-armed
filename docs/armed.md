@@ -213,8 +213,9 @@ Layer:
 | 11..13 | colour B |
 | 14 | param |
 | 15, 16 | `cx`, `cy` in LED coordinates (0..224, 0..64) |
-| 17..19 | 0 |
-| 20.. | M bytes, bit i: the layer covers LED i |
+| 17 | keys: `0` the mask below, `0x80` every key, `n` (1..15) the keys of keymap layer n: bound there (not `KC_TRNS` / `KC_NO`) or bringing it up (`MO`, `LT`, `TG`, `TT`, `OSL`, `LM`, `TO`, tri-layer keys) on another layer. The keyboard reads its keymap again every 250 ms, so a remap needs no theme edit |
+| 18, 19 | 0 |
+| 20.. | M bytes, bit i: the layer covers LED i. With keys ≠ 0 the editor keeps the keys it shows here, for firmware older than 1.9.0 |
 
 Each layer gives every LED it covers a colour and a coverage, then blends it over what is below:
 

@@ -7,6 +7,13 @@
 #include "quantum.h"
 #include "via.h"
 #include "lib/lib8tion/lib8tion.h"
+#include "keymap_introspection.h"
+#ifdef DYNAMIC_KEYMAP_ENABLE
+#    include "dynamic_keymap.h"
+#endif
+#ifdef TRI_LAYER_ENABLE
+#    include "tri_layer.h"
+#endif
 
 __attribute__((weak)) bool armed_theme_load_kb(uint8_t slot, uint8_t *data, uint16_t size) {
     return false;
@@ -42,10 +49,15 @@ enum { B_NORMAL, B_ADD, B_MULTIPLY };
 #    define C_LAYER 0x10
 #    define C_NOT_LAYER 0x20
 
+// which keys a layer covers: its mask, every key, or the keys of keymap layer 1..15
+#    define K_CUSTOM 0x00
+#    define K_ALL 0x80
+#    define K_LAYER_MAX 0x0F
+
 typedef struct PACKED {
     uint8_t type, blend, opacity, speed, dir, size, flags, cond;
     uint8_t a[3], b[3];
-    uint8_t param, cx, cy, reserved[3];
+    uint8_t param, cx, cy, keys, reserved[2];
     uint8_t mask[MASK_BYTES];
 } layer_t;
 
@@ -79,6 +91,7 @@ static layer_t *add_layer(theme_t *t, uint8_t type) {
     l->param   = 255;
     l->cx      = 112;
     l->cy      = 32;
+    l->keys    = K_ALL;
     memset(l->mask, 0xFF, MASK_BYTES);
     return l;
 }
@@ -333,6 +346,60 @@ static uint8_t layer_color(const theme_t *t, uint8_t li, const frame_t *f, uint8
     return 255;
 }
 
+// A key belongs to keymap layer n when something is bound there, or when it brings layer n up
+static bool brings_up(uint16_t kc, uint8_t n) {
+    if (IS_QK_MOMENTARY(kc)) return QK_MOMENTARY_GET_LAYER(kc) == n;
+    if (IS_QK_LAYER_TAP(kc)) return QK_LAYER_TAP_GET_LAYER(kc) == n;
+    if (IS_QK_TOGGLE_LAYER(kc)) return QK_TOGGLE_LAYER_GET_LAYER(kc) == n;
+    if (IS_QK_LAYER_TAP_TOGGLE(kc)) return QK_LAYER_TAP_TOGGLE_GET_LAYER(kc) == n;
+    if (IS_QK_ONE_SHOT_LAYER(kc)) return QK_ONE_SHOT_LAYER_GET_LAYER(kc) == n;
+    if (IS_QK_LAYER_MOD(kc)) return QK_LAYER_MOD_GET_LAYER(kc) == n;
+    if (IS_QK_TO(kc)) return QK_TO_GET_LAYER(kc) == n;
+#    ifdef TRI_LAYER_ENABLE
+    if (kc == QK_TRI_LAYER_LOWER) return n == get_tri_layer_lower_layer() || n == get_tri_layer_adjust_layer();
+    if (kc == QK_TRI_LAYER_UPPER) return n == get_tri_layer_upper_layer() || n == get_tri_layer_adjust_layer();
+#    endif
+    return false;
+}
+
+#    define KEYS_TTL 250 // ms: the keymap is read again this often, so a remap shows up by itself
+
+static uint8_t  keys_mask[K_LAYER_MAX + 1][MASK_BYTES];
+static uint16_t keys_at[K_LAYER_MAX + 1];
+static bool     keys_known[K_LAYER_MAX + 1];
+
+static const uint8_t *layer_keys(uint8_t n) {
+    if (keys_known[n] && timer_elapsed(keys_at[n]) < KEYS_TTL) return keys_mask[n];
+    keys_known[n] = true;
+    keys_at[n]    = timer_read();
+    memset(keys_mask[n], 0, MASK_BYTES);
+#    ifdef DYNAMIC_KEYMAP_ENABLE
+    uint8_t count = dynamic_keymap_get_layer_count();
+#    else
+    uint8_t count = keymap_layer_count();
+#    endif
+    if (n >= count) return keys_mask[n];
+    for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
+        for (uint8_t col = 0; col < MATRIX_COLS; col++) {
+            uint8_t i = g_led_config.matrix_co[row][col];
+            if (i == NO_LED || i >= LEDS) continue;
+            keypos_t pos = {.row = row, .col = col};
+            uint16_t kc  = keymap_key_to_keycode(n, pos);
+            bool     on  = kc != KC_TRNS && kc != KC_NO;
+            for (uint8_t m = 0; !on && m < count; m++)
+                if (m != n) on = brings_up(keymap_key_to_keycode(m, pos), n);
+            if (on) keys_mask[n][i / 8] |= 1 << (i % 8);
+        }
+    }
+    return keys_mask[n];
+}
+
+static bool covers(const layer_t *l, uint8_t i) {
+    if (l->keys == K_ALL) return true;
+    const uint8_t *mask = l->keys >= 1 && l->keys <= K_LAYER_MAX ? layer_keys(l->keys) : l->mask;
+    return mask[i / 8] & (1 << (i % 8));
+}
+
 bool armed_theme_render(uint8_t slot, effect_params_t *params) {
     RGB_MATRIX_USE_LIMITS(led_min, led_max);
     ready();
@@ -349,7 +416,7 @@ bool armed_theme_render(uint8_t slot, effect_params_t *params) {
         uint8_t o[3] = {0, 0, 0};
         for (uint8_t li = 0; li < n; li++) {
             const layer_t *l = &t->layer[li];
-            if (!f[li].on || !(l->mask[i / 8] & (1 << (i % 8)))) continue;
+            if (!f[li].on || !covers(l, i)) continue;
             uint8_t c[3];
             uint8_t a = layer_color(t, li, &f[li], i, c);
             a         = (uint16_t)a * l->opacity / 255;
