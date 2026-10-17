@@ -208,10 +208,11 @@ static bool condition(uint8_t cond) {
             if (cond == C_CAPS) return host_keyboard_led_state().caps_lock;
             if (cond == C_NO_CAPS) return !host_keyboard_led_state().caps_lock;
             return true;
+        // the active layer, the highest one on: holding both tri-layer keys turns on 1, 2 and 3, but shows 3
         case C_LAYER:
-            return n ? layer_state_is(n) : get_highest_layer(layer_state) == 0;
+            return get_highest_layer(layer_state) == n;
         case C_NOT_LAYER:
-            return n ? !layer_state_is(n) : get_highest_layer(layer_state) != 0;
+            return get_highest_layer(layer_state) != n;
     }
     return true;
 }

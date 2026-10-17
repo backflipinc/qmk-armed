@@ -208,7 +208,7 @@ Layer:
 | 4 | direction, a full turn in 256 steps: 0 left to right, 64 top to bottom |
 | 5 | size |
 | 6 | flags: `0x01` from a point (`cx`, `cy`) instead of a direction, `0x02` mirror / bounce, `0x04` reverse, `0x80` hidden |
-| 7 | show when: `0` always, `1` Caps Lock on, `2` Caps Lock off, `0x10 \| n` layer n on, `0x20 \| n` layer n off (n = 0: no layer above the base) |
+| 7 | show when: `0` always, `1` Caps Lock on, `2` Caps Lock off, `0x10 \| n` the active layer (the highest one on) is n, `0x20 \| n` it is not (n = 0: the base layer) |
 | 8..10 | colour A |
 | 11..13 | colour B |
 | 14 | param |
