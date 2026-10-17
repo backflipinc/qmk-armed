@@ -10,8 +10,8 @@
 #define ARMED_COMMAND_ID 0xAD
 #define ARMED_PROTOCOL 1
 
-#define ARMED_VERSION_MAJOR 1
-#define ARMED_VERSION_MINOR 8
+#define ARMED_VERSION_MAJOR 2
+#define ARMED_VERSION_MINOR 0
 #define ARMED_VERSION_PATCH 0
 
 enum armed_command {
