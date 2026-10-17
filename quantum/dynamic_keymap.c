@@ -229,18 +229,33 @@ static uint8_t dynamic_keymap_read_byte(uint32_t offset) {
     return d;
 }
 
+#ifndef VIAL_ENABLE
+typedef struct send_string_nvm_state_t {
+    uint32_t offset;
+} send_string_nvm_state_t;
+
+char send_string_get_next_nvm(void *arg) {
+    send_string_nvm_state_t *state = (send_string_nvm_state_t *)arg;
+    char                     ret   = dynamic_keymap_read_byte(state->offset);
+    state->offset++;
+    return ret;
+}
+#endif
+
 void dynamic_keymap_macro_reset(void) {
     // Erase the macros, if necessary.
     nvm_dynamic_keymap_macro_erase();
     nvm_dynamic_keymap_macro_reset();
 }
 
+#ifdef VIAL_ENABLE
 static uint16_t decode_keycode(uint16_t kc) {
     /* map 0xFF01 => 0x0100; 0xFF02 => 0x0200, etc */
     if (kc > 0xFF00)
         return (kc & 0xFF) << 8;
     return kc;
 }
+#endif
 
 void dynamic_keymap_macro_send(uint8_t id) {
     if (id >= DYNAMIC_KEYMAP_MACRO_COUNT) {
@@ -271,6 +286,10 @@ void dynamic_keymap_macro_send(uint8_t id) {
         ++offset;
     }
 
+#ifndef VIAL_ENABLE
+    send_string_nvm_state_t state = {.offset = offset};
+    send_string_with_delay_impl(send_string_get_next_nvm, &state, DYNAMIC_KEYMAP_MACRO_DELAY);
+#else
     // Send the macro string one or three chars at a time
     // by making temporary 1 or 3 char strings
     char data[4] = {0, 0, 0, 0};
@@ -330,4 +349,5 @@ void dynamic_keymap_macro_send(uint8_t id) {
             send_string_with_delay(data, DYNAMIC_KEYMAP_MACRO_DELAY);
         }
     }
+#endif
 }

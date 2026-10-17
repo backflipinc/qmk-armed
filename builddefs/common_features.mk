@@ -651,6 +651,8 @@ ifeq ($(strip $(VIA_ENABLE)), yes)
     ifeq ($(strip $(VIA_INSECURE)), yes)
         OPT_DEFS += -DVIA_INSECURE
     endif
+    # upstream VIA; compiles to nothing when Vial's via.c is in use
+    SRC += $(QUANTUM_DIR)/via_qmk.c
 endif
 
 # qmk-armed protocol rides on VIA's raw HID handler

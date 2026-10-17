@@ -38,6 +38,7 @@ STATIC_ASSERT(DYNAMIC_KEYMAP_EEPROM_MAX_ADDR <= 65535, "DYNAMIC_KEYMAP_EEPROM_MA
 #    define DYNAMIC_KEYMAP_EEPROM_ADDR DYNAMIC_KEYMAP_EEPROM_START
 #endif
 
+#ifdef VIAL_ENABLE
 // Encoders are located right after the dynamic keymap
 #define VIAL_ENCODERS_EEPROM_ADDR (DYNAMIC_KEYMAP_EEPROM_ADDR + (DYNAMIC_KEYMAP_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2))
 #define DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR VIAL_ENCODERS_EEPROM_ADDR
@@ -94,6 +95,25 @@ STATIC_ASSERT(DYNAMIC_KEYMAP_EEPROM_MAX_ADDR <= 65535, "DYNAMIC_KEYMAP_EEPROM_MA
 #ifndef DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR
 #    define DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR (VIAL_ALT_REPEAT_KEY_EEPROM_ADDR + VIAL_ALT_REPEAT_KEY_SIZE)
 #endif
+#else // VIAL_ENABLE
+// Upstream layout, so plain VIA builds keep EEPROM contents written by upstream QMK
+
+// Dynamic encoders starts after dynamic keymaps
+#ifndef DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR
+#    define DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR (DYNAMIC_KEYMAP_EEPROM_ADDR + (DYNAMIC_KEYMAP_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2))
+#endif
+
+// Dynamic macro starts after dynamic encoders, but only when using ENCODER_MAP
+#ifdef ENCODER_MAP_ENABLE
+#    ifndef DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR
+#        define DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR (DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR + (DYNAMIC_KEYMAP_LAYER_COUNT * NUM_ENCODERS * 2 * 2))
+#    endif // DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR
+#else      // ENCODER_MAP_ENABLE
+#    ifndef DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR
+#        define DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR (DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR)
+#    endif // DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR
+#endif     // ENCODER_MAP_ENABLE
+#endif     // VIAL_ENABLE
 
 // Sanity check that dynamic keymaps fit in available EEPROM
 // If there's not 100 bytes available for macros, then something is wrong.
@@ -229,7 +249,7 @@ void nvm_dynamic_keymap_update_buffer(uint32_t offset, uint32_t size, uint8_t *d
 #endif
 #endif
 
-    for (uint16_t i = 0; i < size; i++) {
+    for (uint32_t i = 0; i < size; i++) {
         if (offset + i < dynamic_keymap_eeprom_size) {
             eeprom_update_byte(target, *source);
         }
