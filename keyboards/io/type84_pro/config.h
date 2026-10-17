@@ -38,3 +38,5 @@
 
 // Lighting themes edited in Vial Armed, stored at the end of the user flash chip (armed_kb.c)
 #define ARMED_THEMES 4
+// HUD layouts on the user flash; with the animation they make the main screens Fn+Left / Fn+Right go through
+#define ARMED_HUD_SCREENS 3

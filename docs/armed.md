@@ -105,7 +105,7 @@ A request the firmware can't serve comes back with `0xFF` (`id_unhandled`) in th
 | `15` CLOCK_GET | — | `[2]` 1 = the time is set, `[3..6]` local time (LE) |
 | `16` CLOCK_SET | `[2..5]` local time (LE) | stored |
 | `17` BOOTLOADER | — | echoed, then the keyboard reboots into its bootloader (no Vial unlock needed) |
-| `18` HUD_INFO | — | `[2]` format (1), `[3]` max widgets, `[4]` widget size, `[5..6]` layout size, `[7..8]` label bytes, `[9]` host numbers, `[10]` host texts, `[11]` host text size, `[12]` fonts, `[13]` colour roles, `[14]` sources, `[15..16]` width, `[17..18]` height, `[19]` max graphs, `[20]` graph samples |
+| `18` HUD_INFO | — | `[2]` format (1), `[3]` max widgets, `[4]` widget size, `[5..6]` layout size, `[7..8]` label bytes, `[9]` host numbers, `[10]` host texts, `[11]` host text size, `[12]` fonts, `[13]` colour roles, `[14]` sources, `[15..16]` width, `[17..18]` height, `[19]` max graphs, `[20]` graph samples, `[21]` stored layouts (0 before 2.1.0: one), `[22]` the one shown |
 | `19` HUD_SOURCE | `[2]` index (< sources) | `[3]` source id, `[4]` kind: 0 text, 1 number, 2 on / off, 3 multi-line text, `[5]` decimals (`0xFF`: set by the host), `[6..]` name |
 | `20` HUD_VALUE | `[2]` source id | `[3]` valid, `[4]` suggested colour role, `[5]` decimals, `[6..9]` number (LE, signed), `[10..]` text |
 | `21` HUD_FONT | `[2]` font, `[3..6]` offset, `[7]` length (≤ 24) | `[8..]` bytes of the font (QFF), for a preview drawn with the keyboard's own fonts |
@@ -136,7 +136,8 @@ answers `0xFF`.
 Values: `0` lighting on, `1` effect (QMK mode id), `2` colour 2, `3` Fn colour, `4` light bar mode,
 `5` light bar colour, `6` Caps alert, `7` sleep option, `8` hue, `9` saturation, `10` brightness, `11` speed,
 `12` main screen (0 = HUD, 1 = the uploaded animation), `13` clock (0 = 24H, 1 = 12H, 2 = off), `14` NKRO,
-`15` GUI lock, `16` SnapTap mode, `17` UI accent, `18` screen-off timeout (indexes into their lists), `19` Bluetooth slot.
+`15` GUI lock, `16` SnapTap mode, `17` UI accent, `18` screen-off timeout (indexes into their lists), `19` Bluetooth slot, `20` HUD layout shown (with `ARMED_F_HUD`;
+firmware before 2.1.0 answers unhandled).
 Colours are indexes into the colour preset list.
 
 Hue, saturation, brightness and speed skip EEPROM writes, so a slider can stream them; the app sends SAVE
@@ -245,7 +246,9 @@ Keyboard side: call `armed_hud_init(device, fonts, count)` once the display is u
 main screen is drawn; `all` means the whole screen, otherwise only widgets whose content changed are redrawn.
 Optional hooks: `armed_hud_defaults_kb()` builds the default layout with `armed_hud_add()`,
 `armed_hud_color_kb()` gives the colour roles their colours, `armed_hud_source_kb()` adds or overrides sources,
-`armed_hud_load_kb()` / `armed_hud_save_kb()` store the layout (one blob, 1476 bytes with the default sizes).
+`armed_hud_load_kb(screen, …)` / `armed_hud_save_kb(screen, …)` store the layouts (1476 bytes each with the default
+sizes). `ARMED_HUD_SCREENS` (default 1) is how many the keyboard keeps; `armed_hud_set_screen()` picks the one shown,
+which the HUD commands read, write, store and revert. A layout never stored starts as the default one.
 See `keyboards/io/type84_pro/ui.c` and `armed_kb.c`.
 
 ### Colours

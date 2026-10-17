@@ -14,9 +14,11 @@
 #        include "ui.h"
 #    endif
 
-// Past the stock firmware's write limit (0xFF5000), one sector per slot
+// Past the stock firmware's write limit (0xFF5000), one sector per slot; HUD screens go down from
+// 0xFFB000, so the first one stays where 1.x kept the only one
 #    define THEME_BASE 0xFFC000UL
 #    define HUD_BASE 0xFFB000UL
+#    define HUD_ADDR(screen) (HUD_BASE - (uint32_t)(screen) * SPIFLASH_SECTOR)
 
 bool armed_theme_load_kb(uint8_t slot, uint8_t *data, uint16_t size) {
     if (slot >= ARMED_THEMES || size > SPIFLASH_SECTOR) return false;
@@ -35,17 +37,18 @@ bool armed_theme_save_kb(uint8_t slot, const uint8_t *data, uint16_t size) {
 }
 
 #    ifdef QUANTUM_PAINTER_ENABLE
-bool armed_hud_load_kb(uint8_t *data, uint16_t size) {
-    if (size > SPIFLASH_SECTOR) return false;
-    spiflash_read(SPIFLASH_USER, HUD_BASE, data, size);
+bool armed_hud_load_kb(uint8_t screen, uint8_t *data, uint16_t size) {
+    if (screen >= ARMED_HUD_SCREENS || size > SPIFLASH_SECTOR) return false;
+    spiflash_read(SPIFLASH_USER, HUD_ADDR(screen), data, size);
     return true;
 }
 
 // First byte last: a write cut short leaves no magic, so the HUD falls back to the default layout
-bool armed_hud_save_kb(const uint8_t *data, uint16_t size) {
-    if (size > SPIFLASH_SECTOR || !spiflash_erase(SPIFLASH_USER, HUD_BASE, SPIFLASH_SECTOR)) return false;
+bool armed_hud_save_kb(uint8_t screen, const uint8_t *data, uint16_t size) {
+    uint32_t addr = HUD_ADDR(screen);
+    if (screen >= ARMED_HUD_SCREENS || size > SPIFLASH_SECTOR || !spiflash_erase(SPIFLASH_USER, addr, SPIFLASH_SECTOR)) return false;
     for (int32_t off = (size - 1) / SPIFLASH_PAGE * SPIFLASH_PAGE; off >= 0; off -= SPIFLASH_PAGE) {
-        if (!spiflash_program(SPIFLASH_USER, HUD_BASE + off, data + off, MIN(SPIFLASH_PAGE, size - off))) return false;
+        if (!spiflash_program(SPIFLASH_USER, addr + off, data + off, MIN(SPIFLASH_PAGE, size - off))) return false;
     }
     return true;
 }
@@ -151,6 +154,9 @@ bool armed_get_value_kb(uint8_t id, uint8_t *out) {
         case ARMED_V_SCREEN:
             *out = ui_screen_mode();
             return true;
+        case ARMED_V_HUD_SCREEN:
+            *out = armed_hud_screen();
+            return true;
         case ARMED_V_CLOCK:
             *out = ui_clock_format();
             return true;
@@ -204,6 +210,10 @@ bool armed_set_value_kb(uint8_t id, uint8_t v) {
         case ARMED_V_SCREEN:
             if (v >= UI_SCREEN_MODES) return false;
             ui_set_screen_mode(v);
+            return true;
+        case ARMED_V_HUD_SCREEN:
+            if (v >= ARMED_HUD_SCREENS) return false;
+            ui_set_hud_screen(v);
             return true;
         case ARMED_V_CLOCK:
             if (v >= UI_CLOCK_FORMATS) return false;

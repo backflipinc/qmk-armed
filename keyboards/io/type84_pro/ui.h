@@ -13,6 +13,8 @@ bool ui_menu_active(void);
 #define UI_SCREEN_MODES 2 // главный экран: 0 — HUD, 1 — анимация пользователя
 uint8_t ui_screen_mode(void);
 void    ui_set_screen_mode(uint8_t mode);
+void    ui_set_hud_screen(uint8_t screen); // and keeps it for the next start
+void    ui_screen_step(int8_t dir);        // main screens in turn: HUD 1 .. HUD n, then the animation
 #define UI_CLOCK_FORMATS 3 // часы на HUD: 0 — 24H, 1 — 12H, 2 — OFF
 uint8_t ui_clock_format(void);
 void    ui_set_clock_format(uint8_t format);

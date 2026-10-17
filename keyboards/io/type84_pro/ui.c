@@ -111,21 +111,32 @@ static const struct {
     uint16_t    sec;
 } screen_timeouts[] = {{"OFF", 0}, {"30S", 30}, {"1M", 60}, {"5M", 300}, {"10M", 600}};
 
-// Что на главном экране: HUD или анимация пользователя из SPI-флеша (screen.c)
-static const char *const screen_modes[UI_SCREEN_MODES] = {"HUD", "ANIMATION"};
+// Что на главном экране: один из HUD (qmk-armed хранит несколько раскладок) или анимация из SPI-флеша
+// (screen.c). Вместе это пул экранов, который листают Fn+Left / Fn+Right и пункт MAIN SCREEN
+#    if defined(ARMED_ENABLE) && ARMED_HUD_SCREENS > 1
+#        define HUD_SCREENS ARMED_HUD_SCREENS
+#    else
+#        define HUD_SCREENS 1
+#    endif
+#    define POOL (HUD_SCREENS + 1)
 static const char *const clock_formats[UI_CLOCK_FORMATS] = {"24H", "12H", "OFF"};
 
-static uint8_t accent_idx, scr_to_idx, scr_mode, clock_fmt;
+static uint8_t accent_idx, scr_to_idx, scr_mode, clock_fmt, hud_scr;
 
 static void settings_load(void) {
     accent_idx = kb_settings()->accent;
     scr_to_idx = kb_settings()->screen_timeout;
     scr_mode   = kb_settings()->screen_mode;
     clock_fmt  = kb_settings()->clock_format;
+    hud_scr    = kb_settings()->hud_screen;
     if (accent_idx >= ARRAY_SIZE(accents)) accent_idx = 0;
     if (scr_to_idx >= ARRAY_SIZE(screen_timeouts)) scr_to_idx = 0;
     if (scr_mode >= UI_SCREEN_MODES) scr_mode = 0;
     if (clock_fmt >= UI_CLOCK_FORMATS) clock_fmt = 0;
+    if (hud_scr >= HUD_SCREENS) hud_scr = 0;
+#    ifdef ARMED_ENABLE
+    armed_hud_set_screen(hud_scr);
+#    endif
     C_ACC = accents[accent_idx].c;
 }
 
@@ -134,9 +145,15 @@ static void settings_save(void) {
     kb_settings()->screen_timeout = scr_to_idx;
     kb_settings()->screen_mode    = scr_mode;
     kb_settings()->clock_format   = clock_fmt;
+    kb_settings()->hud_screen     = hud_scr;
     kb_settings_save();
     C_ACC = accents[accent_idx].c;
 }
+
+// the pool: HUD 1 .. HUD n, then the animation
+static uint8_t pool_index(void);
+static void    pool_name(char *buf, uint8_t len, uint8_t i);
+static void    pool_select(uint8_t i);
 
 /* --------------------------------------------------------------------------
  * Модель меню
@@ -435,7 +452,7 @@ static void item_value(uint8_t id, char *buf, uint8_t len, int16_t *gauge) {
             strcpy(buf, screen_timeouts[scr_to_idx].name);
             break;
         case DS_SCREEN:
-            strcpy(buf, screen_modes[scr_mode]);
+            pool_name(buf, len, pool_index());
             break;
         case DS_CLOCK:
             strcpy(buf, clock_formats[clock_fmt]);
@@ -596,7 +613,7 @@ static void item_adjust(uint8_t id, int8_t dir) {
             settings_save();
             break;
         case DS_SCREEN:
-            ui_set_screen_mode((scr_mode + UI_SCREEN_MODES + dir) % UI_SCREEN_MODES);
+            pool_select((pool_index() + POOL + dir) % POOL);
             break;
         case DS_CLOCK:
             ui_set_clock_format((clock_fmt + UI_CLOCK_FORMATS + dir) % UI_CLOCK_FORMATS);
@@ -915,6 +932,57 @@ void ui_set_screen_mode(uint8_t mode) {
     scr_mode = mode;
     settings_save();
     full_redraw = true;
+}
+
+static uint8_t pool_index(void) {
+    return scr_mode == 1 ? HUD_SCREENS : hud_scr;
+}
+
+static void pool_name(char *buf, uint8_t len, uint8_t i) {
+    if (i >= HUD_SCREENS) {
+        snprintf(buf, len, "ANIMATION");
+    } else if (HUD_SCREENS == 1) {
+        snprintf(buf, len, "HUD");
+    } else {
+        snprintf(buf, len, "HUD %u", i + 1);
+    }
+}
+
+static void pool_select(uint8_t i) {
+    if (i < HUD_SCREENS) {
+        hud_scr  = i;
+        scr_mode = 0;
+#    ifdef ARMED_ENABLE
+        armed_hud_set_screen(i);
+#    endif
+    } else {
+        scr_mode = 1;
+    }
+    settings_save();
+    full_redraw = true;
+}
+
+void ui_set_hud_screen(uint8_t screen) {
+    if (screen >= HUD_SCREENS) return;
+    hud_scr = screen;
+#    ifdef ARMED_ENABLE
+    armed_hud_set_screen(screen);
+#    endif
+    settings_save();
+    full_redraw = true;
+}
+
+void ui_screen_step(int8_t dir) {
+    uint8_t i = pool_index();
+    // an empty animation slot is left out, unless it is all there is to step to
+    for (uint8_t n = 0; n < POOL; n++) {
+        i = (i + POOL + dir) % POOL;
+        if (i < HUD_SCREENS || screen_frames()) break;
+    }
+    pool_select(i);
+    char b[16];
+    pool_name(b, sizeof(b), i);
+    ui_toast(b);
 }
 
 uint8_t ui_accent_count(void) {
@@ -1271,17 +1339,9 @@ bool ui_process(uint16_t keycode, keyrecord_t *record) {
                     break;
                 }
                 case UI_LEFT:
-                case UI_RIGHT: {
-                    if (keycode == UI_RIGHT) {
-                        rgb_matrix_step();
-                    } else {
-                        rgb_matrix_step_reverse();
-                    }
-                    char b[16];
-                    effect_name(b, sizeof(b));
-                    ui_toast(b);
+                case UI_RIGHT:
+                    ui_screen_step(keycode == UI_RIGHT ? 1 : -1);
                     break;
-                }
             }
             break;
 

@@ -29,11 +29,11 @@ __attribute__((weak)) void armed_hud_color_kb(uint8_t role, uint8_t *hsv) {
     memcpy(hsv, palette[role], 3);
 }
 
-__attribute__((weak)) bool armed_hud_load_kb(uint8_t *data, uint16_t size) {
+__attribute__((weak)) bool armed_hud_load_kb(uint8_t screen, uint8_t *data, uint16_t size) {
     return false;
 }
 
-__attribute__((weak)) bool armed_hud_save_kb(const uint8_t *data, uint16_t size) {
+__attribute__((weak)) bool armed_hud_save_kb(uint8_t screen, const uint8_t *data, uint16_t size) {
     return false;
 }
 
@@ -332,8 +332,10 @@ static void setup(void) {
     redraw_all = true;
 }
 
+static uint8_t current;
+
 static void fetch(void) {
-    if (!armed_hud_load_kb((uint8_t *)&layout, sizeof(layout)) || !valid()) defaults();
+    if (!armed_hud_load_kb(current, (uint8_t *)&layout, sizeof(layout)) || !valid()) defaults();
 }
 
 static void load(void) {
@@ -782,6 +784,18 @@ bool armed_hud_ready(void) {
     return lcd != NULL;
 }
 
+uint8_t armed_hud_screen(void) {
+    return current;
+}
+
+// a screen never stored starts as the keyboard's default layout; unsaved edits of the one shown are dropped
+void armed_hud_set_screen(uint8_t screen) {
+    if (screen >= ARMED_HUD_SCREENS || screen == current) return;
+    current = screen;
+    editing = false;
+    if (lcd) load();
+}
+
 /* --------------------------------------------------------------------------
  * Protocol
  * ------------------------------------------------------------------------ */
@@ -806,6 +820,8 @@ static void info(uint8_t *d) {
     d[18] = scr_h >> 8;
     d[19] = ARMED_HUD_GRAPHS;
     d[20] = ARMED_HUD_GRAPH_POINTS;
+    d[21] = ARMED_HUD_SCREENS;
+    d[22] = current;
 }
 
 static void push(const uint8_t *d) {
@@ -938,7 +954,7 @@ bool armed_hud_receive(uint8_t *d, uint8_t length) {
                 // a host retrying over the radio repeats APPLY; redraw only for new data
                 if (editing) setup();
                 editing = false;
-                if (d[2]) ok = armed_hud_save_kb((const uint8_t *)&layout, sizeof(layout));
+                if (d[2]) ok = armed_hud_save_kb(current, (const uint8_t *)&layout, sizeof(layout));
                 break;
             case ARMED_HUD_REVERT: {
                 uint32_t was = layout_hash();

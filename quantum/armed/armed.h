@@ -95,6 +95,7 @@ enum armed_value {
     ARMED_V_ACCENT,
     ARMED_V_SCREEN_OFF,
     ARMED_V_BT_SLOT,
+    ARMED_V_HUD_SCREEN, // which stored HUD layout the main screen shows
 };
 
 // effect flags in the effect list
@@ -165,6 +166,10 @@ bool armed_clock_set_kb(const armed_time_t *t);
 // Set by the core once the keyboard calls armed_hud_init().
 #define ARMED_HUD_FORMAT 1
 #define ARMED_HUD_MAGIC 0xB7
+// layouts the keyboard stores; one is shown at a time
+#ifndef ARMED_HUD_SCREENS
+#    define ARMED_HUD_SCREENS 1
+#endif
 #ifndef ARMED_HUD_WIDGETS
 #    define ARMED_HUD_WIDGETS 40
 #endif
@@ -271,6 +276,9 @@ void armed_hud_init(const void *device, const armed_hud_font_t *fonts, uint8_t c
 // draws the main screen, only what changed unless `all`
 void armed_hud_draw(bool all);
 bool armed_hud_ready(void);
+// the layout shown and edited, 0 .. ARMED_HUD_SCREENS - 1; callable before armed_hud_init()
+uint8_t armed_hud_screen(void);
+void    armed_hud_set_screen(uint8_t screen);
 bool armed_hud_receive(uint8_t *data, uint8_t length); // false: no reply
 // for armed_hud_defaults_kb(): appends a widget, NULL when full
 armed_hud_widget_t *armed_hud_add(uint8_t type, uint8_t source, uint8_t font, uint8_t fg, uint8_t bg, uint8_t flags, int16_t x, int16_t y, int16_t w, int16_t h, uint8_t param, const char *label);
@@ -278,5 +286,5 @@ armed_hud_widget_t *armed_hud_add(uint8_t type, uint8_t source, uint8_t font, ui
 void armed_hud_defaults_kb(void);
 bool armed_hud_source_kb(uint8_t source, armed_hud_value_t *value); // keyboard's own sources, or override the core's
 void armed_hud_color_kb(uint8_t role, uint8_t *hsv);
-bool armed_hud_load_kb(uint8_t *data, uint16_t size);
-bool armed_hud_save_kb(const uint8_t *data, uint16_t size);
+bool armed_hud_load_kb(uint8_t screen, uint8_t *data, uint16_t size);
+bool armed_hud_save_kb(uint8_t screen, const uint8_t *data, uint16_t size);
