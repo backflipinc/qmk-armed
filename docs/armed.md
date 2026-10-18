@@ -142,7 +142,7 @@ Values: `0` lighting on, `1` effect (QMK mode id), `2` colour 2, `3` Fn colour, 
 firmware before 2.1.0 answers unhandled).
 Colours are indexes into the colour preset list.
 
-GET_MANY and ENTRIES save round trips over the 2.4 GHz tunnel, where each one costs about 20 ms; older
+GET_MANY and ENTRIES (2.1.1) save round trips over the 2.4 GHz tunnel, where each one costs about 16 ms; older
 firmware answers `0xFF` and the app reads one by one.
 
 Hue, saturation, brightness and speed skip EEPROM writes, so a slider can stream them; the app sends SAVE
