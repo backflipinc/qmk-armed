@@ -5,6 +5,10 @@
 #include "quantum.h"
 #include "via.h"
 #include "raw_hid.h"
+#ifdef VIAL_ENABLE
+#    include "dynamic_keymap.h"
+#    include "vial.h"
+#endif
 
 __attribute__((weak)) uint16_t armed_features_kb(void) {
     return 0;
@@ -232,6 +236,85 @@ static bool clock_set(const uint8_t *data) {
     return armed_clock_set_kb(&t);
 }
 
+// [2] count, [3..] value ids -> [3..] values in their place, [16..17] which ones were answered (LE)
+static bool get_many(uint8_t *data) {
+    uint8_t  n    = data[2];
+    uint16_t done = 0;
+    if (n > ARMED_GET_MANY_MAX) return false;
+    for (uint8_t i = 0; i < n; i++) {
+        uint8_t v = 0;
+        if (get_value(data[3 + i], &v)) done |= 1 << i;
+        data[3 + i] = v;
+    }
+    data[16] = done & 0xFF;
+    data[17] = done >> 8;
+    return true;
+}
+
+#ifdef VIAL_ENABLE
+// one Vial dynamic entry as its GET op returns it; false past the end
+static bool entry(uint8_t op, uint8_t index, uint8_t *out, uint8_t *size) {
+    switch (op) {
+#    ifdef VIAL_TAP_DANCE_ENABLE
+        case dynamic_vial_tap_dance_get: {
+            vial_tap_dance_entry_t e = {0};
+            *size                    = sizeof(e);
+            if (dynamic_keymap_get_tap_dance(index, &e) != 0) return false;
+            memcpy(out, &e, sizeof(e));
+            return true;
+        }
+#    endif
+#    ifdef VIAL_COMBO_ENABLE
+        case dynamic_vial_combo_get: {
+            vial_combo_entry_t e = {0};
+            *size                = sizeof(e);
+            if (dynamic_keymap_get_combo(index, &e) != 0) return false;
+            memcpy(out, &e, sizeof(e));
+            return true;
+        }
+#    endif
+#    ifdef VIAL_KEY_OVERRIDE_ENABLE
+        case dynamic_vial_key_override_get: {
+            vial_key_override_entry_t e = {0};
+            *size                       = sizeof(e);
+            if (dynamic_keymap_get_key_override(index, &e) != 0) return false;
+            memcpy(out, &e, sizeof(e));
+            return true;
+        }
+#    endif
+#    ifdef VIAL_ALT_REPEAT_KEY_ENABLE
+        case dynamic_vial_alt_repeat_key_get: {
+            vial_alt_repeat_key_entry_t e = {0};
+            *size                         = sizeof(e);
+            if (dynamic_keymap_get_alt_repeat_key(index, &e) != 0) return false;
+            memcpy(out, &e, sizeof(e));
+            return true;
+        }
+#    endif
+        default:
+            return false;
+    }
+}
+#endif
+
+// [2] Vial GET op, [3] first index -> [2] entries that fit from [4] on, packed
+static bool entries(uint8_t *data, uint8_t length) {
+#ifdef VIAL_ENABLE
+    uint8_t op = data[2], index = data[3], n = 0, size = 0;
+    uint8_t buf[16];
+    for (uint8_t at = 4;; index++, n++) {
+        if (!entry(op, index, buf, &size) || at + size > length) break;
+        memcpy(&data[at], buf, size);
+        at += size;
+    }
+    if (!size) return false; // not a kind this firmware has
+    data[2] = n;
+    return true;
+#else
+    return false;
+#endif
+}
+
 static void info(uint8_t *data) {
     uint16_t f = features();
     data[2]    = 'A';
@@ -287,6 +370,12 @@ bool armed_raw_hid_receive(uint8_t *data, uint8_t length) {
             break;
         case ARMED_CLOCK_SET:
             ok = clock_set(data);
+            break;
+        case ARMED_GET_MANY:
+            ok = get_many(data);
+            break;
+        case ARMED_ENTRIES:
+            ok = entries(data, length);
             break;
         case ARMED_BOOTLOADER:
             // bypasses Vial's unlock on purpose: lets flash scripts reboot the board unattended

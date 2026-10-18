@@ -44,7 +44,11 @@ enum armed_command {
     ARMED_HUD_REVERT,
     ARMED_HUD_PUSH,
     ARMED_HUD_TEXT,
+    ARMED_GET_MANY,
+    ARMED_ENTRIES,
 };
+
+#define ARMED_GET_MANY_MAX 13 // value ids in one GET_MANY
 
 enum armed_feature {
     ARMED_F_RGB_MATRIX = 1 << 0,

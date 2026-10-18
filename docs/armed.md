@@ -116,6 +116,8 @@ A request the firmware can't serve comes back with `0xFF` (`id_unhandled`) in th
 | `26` HUD_REVERT | `[2]` 0 = the stored layout, 1 = the built-in default | shown, not stored (no redraw when the layout does not change) |
 | `27` HUD_PUSH | `[2]` seconds the values stay valid (0 = until replaced), `[3]` count (≤ 4), then per value `slot`, `decimals`, number (4 bytes LE, signed) | **no reply** |
 | `28` HUD_TEXT | `[2]` slot, `[3]` seconds valid, `[4]` offset, `[5]` length (≤ 25), `[6]` 1 = last piece, `[7..]` ASCII | **no reply**; pieces in order, starting at offset 0 |
+| `29` GET_MANY | `[2]` count (≤ 13), `[3..]` value ids | `[3..]` the values in place of their ids, `[16..17]` bit i set: value i answered (LE) |
+| `30` ENTRIES | `[2]` Vial dynamic entry GET op (1 tap dance, 3 combo, 5 key override, 7 alt repeat key), `[3]` first index | `[2]` how many follow, `[4..]` the entries as Vial's GET returns them, packed (2 of 10 bytes, 4 of 6); fewer at the end, 0 past it |
 
 Lists:
 
@@ -139,6 +141,9 @@ Values: `0` lighting on, `1` effect (QMK mode id), `2` colour 2, `3` Fn colour, 
 `15` GUI lock, `16` SnapTap mode, `17` UI accent, `18` screen-off timeout (indexes into their lists), `19` Bluetooth slot, `20` HUD layout shown (with `ARMED_F_HUD`;
 firmware before 2.1.0 answers unhandled).
 Colours are indexes into the colour preset list.
+
+GET_MANY and ENTRIES save round trips over the 2.4 GHz tunnel, where each one costs about 20 ms; older
+firmware answers `0xFF` and the app reads one by one.
 
 Hue, saturation, brightness and speed skip EEPROM writes, so a slider can stream them; the app sends SAVE
 when the slider is released. `ARMED_PROTOCOL` changes only when the wire format breaks; new features and
