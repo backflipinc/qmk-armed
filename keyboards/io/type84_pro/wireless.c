@@ -48,7 +48,8 @@
 #    define WL_ACK_TIMEOUT_MS 15 // ждём "a\r\n" (в стоке 5 тиков)
 #endif
 #ifndef WL_TUNNEL_GAP_MS
-#    define WL_TUNNEL_GAP_MS 8 // fewer replies lost over the air than with WL_FRAME_GAP_MS (A/B: 3.3% -> 0.7%)
+#    define WL_TUNNEL_GAP_MS 4 // after the module's ACK; per 1000 round trips: 2 ms loses 3.2%, 4 ms 0.1-0.4%
+                                 // (16 ms median), 8 ms 1.0% (20 ms)
 #endif
 #ifndef WL_RETRIES
 #    define WL_RETRIES 3 // повторов кадра, как в стоке
